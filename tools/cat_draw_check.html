@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>猫の描画 検証ページ v0.2.0</title>
+<style>body{font:13px/1.7 monospace;background:#101010;color:#e8e6e0;padding:14px}canvas{background:#26241f;margin:4px}pre{color:#bdbab2}</style>
+</head>
+<body>
+<h1>drawCat 検証（6ポーズ × 柄3種）</h1>
+<div id="row1"></div>
+<div id="row2"></div>
+<pre id="out"></pre>
+<script src="../assets/v1/data.js"></script>
+<script src="../assets/v1/judge.js"></script>
+<script src="../assets/v1/engine_code.js"></script>
+<script src="../assets/v1/catart.js"></script>
+<script src="../assets/v1/prompts.js"></script>
+<script>
+window.addEventListener('load', function(){
+'use strict';
+var poses = ['idle','run','jump','land','success','fail'];
+var r1 = document.getElementById('row1');
+poses.forEach(function(p){
+  var cv = document.createElement('canvas'); cv.width=150; cv.height=180;
+  var ctx = cv.getContext('2d'); CT.drawCat(ctx, 75, 164, 40, p, 1, 1, 1, {mode:'shima'});
+  var lbl = document.createElement('span'); lbl.textContent = p;
+  var box = document.createElement('span'); box.style.display='inline-block'; box.style.textAlign='center';
+  box.appendChild(cv); box.appendChild(lbl); r1.appendChild(box);
+});
+var r2 = document.getElementById('row2');
+['shima','madara','tan'].forEach(function(m){
+  var cv = document.createElement('canvas'); cv.width=150; cv.height=180;
+  var ctx = cv.getContext('2d'); CT.drawCat(ctx, 75, 164, 40, 'idle', 1, 1, 1, {mode:m});
+  var lbl = document.createElement('span'); lbl.textContent = m;
+  var box = document.createElement('span'); box.style.display='inline-block'; box.style.textAlign='center';
+  box.appendChild(cv); box.appendChild(lbl); r2.appendChild(box);
+});
+/* 罠検査: 同梱するCAT_DRAW_SRCの中身 */
+var L = [];
+L.push('CAT_DRAW_SRC=' + CT.CAT_DRAW_SRC.length + 'B');
+L.push('backticks=' + (CT.CAT_DRAW_SRC.split('`').length - 1));
+L.push('dollarbrace=' + ((CT.CAT_DRAW_SRC.match(/\$\{/g)||[]).length));
+L.push('drawCat_in_SRC=' + ((CT.CAT_DRAW_SRC.match(/drawCat/g)||[]).length));
+L.push('CORE_CODE(drawPico置換後)= ' + CT.ENGINE.CORE_CODE.split('drawPico').join('drawCat').length + 'B / 残留pico=' + (CT.ENGINE.CORE_CODE.split('drawPico').join('drawCat').match(/[Pp]ico/g)||[]).length);
+document.getElementById('out').textContent = L.join('\n');
+});
+</script>
+</body>
+</html>

@@ -3,26 +3,56 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>CATGame_GEN — 物流テスト版 v0.0.1</title>
+<title>CATGame_GEN — 画面と出力の版 v0.2.0</title>
+<meta name="description" content="EMS（Ends and Means Structure／手段目的構造）を高校生が自分の手で埋めて、ネコテーマのゲーム案を1本にまとめる演習ツール。生成AIのAPIは使いません。">
 <meta name="theme-color" content="#141414">
-<style>
-  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#141414;color:#f2f0eb;
-       font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN",sans-serif}
-  main{text-align:center;padding:2rem}
-  .cat{font-size:3rem;line-height:1}
-  h1{font-size:1.4rem;letter-spacing:.06em;margin:.8rem 0 .4rem}
-  .ver{display:inline-block;margin-top:.6rem;padding:.3rem .9rem;border:1px solid #6b6b6b;border-radius:999px;
-       font-size:.78rem;color:#bdbab2}
-  p{color:#bdbab2;font-size:.85rem;line-height:1.8;margin:.3rem 0}
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/v1/style.css">
 </head>
 <body>
-<main>
-  <div class="cat">🐱</div>
-  <h1>CATGame_GEN</h1>
-  <p>EMS（Ends and Means Structure／手段目的構造）を自分の手で埋めて、<br>猫テーマのゲーム案を1本にまとめるツール。</p>
-  <p>いまは物流テスト中です（push→Pages→キャッシュの仕組み確認用）。本体は準備中。</p>
-  <span class="ver">物流テスト版 v0.0.1（版名はHTMLに直接書く）</span>
-</main>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="wordmark" href="#" aria-label="最初に戻る">
+      <span class="wm-main">CAT<span class="slash">//</span>GEN</span>
+      <span class="wm-sub">EMSを自分の手で埋める。ネコのゲーム案を1本に。</span>
+    </a>
+    <div class="bar-right">
+      <details class="verbox" id="verBox">
+        <!-- 版の名前はHTMLに直接書く（JSで書き換えない）。GitHub Pages はJSに
+             max-age=600 を返すため、push直後は古いapp.jsが動く。ここがHTMLなら、
+             HTMLが新しければ必ず新しい版名が出る（PK//PROTOでの実測）。 -->
+        <summary class="ver" id="verChip">画面と出力の版 v0.2.0</summary>
+        <div class="verpanel" id="verPanel"><div class="vp-date">2026-11-01</div></div>
+      </details>
+      <button class="icon-btn" id="btnPrint" type="button" title="印刷 / PDF保存">印刷</button>
+      <button class="icon-btn" id="btnRestart" type="button" title="最初からやり直す">最初から</button>
+    </div>
+  </div>
+</header>
+
+<div class="rolebar" id="rolebar"></div>
+
+<div class="shell">
+  <nav class="rail" id="rail" aria-label="進行状況"></nav>
+  <main id="app" class="app" tabindex="-1"></main>
+</div>
+
+<footer class="foot">
+  <p>CATGame_GEN — 生成AIのAPIは使いません。案はDBの文章から決定的に組み立てます（乱数なし）。EMSの定義: E=Ends（目的）／M=Means（手段）／S=Structure（構造）。制約は構造に加える「〜せずに」「〜しながら」等の刺激。</p>
+  <p>ネコは図形（四角と三角）で描きます。実在の猫の写真・実在キャラクター・ロゴは使いません。色は3色まで。鳴き声は「にゃー」だけ。音はWeb Audioで合成します。</p>
+  <p><a href="https://github.com/odatid/PikoTGame">現行ツール PK//PROTO v2</a>（好きなゲームにピコ太郎を乗せる）の設計思想・検証のやり方を継承しています。</p>
+</footer>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="assets/v1/data.js"></script>
+<script src="assets/v1/judge.js"></script>
+<script src="assets/v1/engine_code.js"></script>
+<script src="assets/v1/catart.js"></script>
+<script src="assets/v1/prompts.js"></script>
+<script src="assets/v1/app.js"></script>
 </body>
 </html>

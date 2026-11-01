@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>検証ページ — データと判定の版 v0.1.0</title>
+<style>
+ body{font:13px/1.7 monospace;background:#101010;color:#e8e6e0;padding:14px;white-space:pre-wrap}
+ h1{color:#ffd400;font-size:14px} .ok{color:#7ddb7d} .ng{color:#ff7d7d} .chip{display:inline-block;padding:0 8px;border-radius:10px;margin:1px}
+ .green{background:#1d5c2a;color:#a8f0b8} .yellow{background:#5c4d1d;color:#f0e3a8} .red{background:#5c1d1d;color:#f0a8a8} .empty{background:#444;color:#ddd}
+</style>
+</head>
+<body>
+<h1>CATGame_GEN 検証ページ（データと判定の版 v0.1.0）</h1>
+<p>このページは data.js と judge.js を直接読み込んで数えます。再実行は再読み込みだけ。</p>
+<pre id="out">実行中...</pre>
+<script src="../assets/v1/data.js"></script>
+<script src="../assets/v1/judge.js"></script>
+<script>
+window.addEventListener('load', function(){
+'use strict';
+var L=[]; function log(s){ L.push(s); }
+function chip(r){ var w=CT.JUDGE_WORDS[r.color]||{}; return '<span class="chip '+r.color+'">'+r.color+'・'+(w.word||r.verdict)+'</span>'; }
+
+log('== 1. 件数（数えて出す） ==');
+log('ACTIONS='+CT.ACTIONS.length+'（行動・手段の材料）');
+log('CONSTRAINTS='+CT.CONSTRAINTS.length+'（制約の型・全て数値必須）');
+log('PURPOSES='+CT.PURPOSES.length+'（目的の型・実観察の定番ネタ）');
+log('CANDS good='+CT.CANDS.good.length+' / bad='+CT.CANDS.bad.length+' / feat='+CT.CANDS.feat.length+' / target='+CT.CANDS.target.length);
+log('候補合計='+(CT.CANDS.good.length+CT.CANDS.bad.length+CT.CANDS.feat.length+CT.CANDS.target.length+CT.PURPOSES.length)+'件');
+var fitCells=Object.keys(CT.FIT).reduce(function(a,k){ return a+Object.keys(CT.FIT[k]).length; },0);
+log('相性表='+fitCells+'セル（行動×制約型）');
+
+log('');
+log('== 2. 参照切れ検査 ==');
+var actIds=CT.ACTIONS.map(function(a){return a.id;}), conIds=CT.CONSTRAINTS.map(function(c){return c.id;}), broken=0;
+Object.keys(CT.FIT).forEach(function(a){ if(actIds.indexOf(a)<0){ log('NG 迷子の行 '+a); broken++; }
+  Object.keys(CT.FIT[a]).forEach(function(c){ if(conIds.indexOf(c)<0){ log('NG 迷子の列 '+c); broken++; } }); });
+actIds.forEach(function(a){ if(!CT.FIT[a]){ log('NG 相性表に行がない '+a); broken++; } else{ conIds.forEach(function(c){ if(!CT.FIT[a][c]){ log('NG セル欠け '+a+'/'+c); broken++; } }); } });
+log(broken===0 ? '<span class="ok">PASS 参照切れ=0件</span>' : '<span class="ng">FAIL 参照切れ='+broken+'件</span>');
+
+log('');
+log('== 3. 同一入力なら同じ出力（2回組んで比較） ==');
+var st={purpose:'p_can',action:'a_climb',cons:[{id:'c_time',num:30},{id:'c_phys',num:2}]};
+var same=JSON.stringify(CT.judge(st))===JSON.stringify(CT.judge(st));
+log(same ? '<span class="ok">PASS 同一入力→同一出力</span>' : '<span class="ng">FAIL 出力が変わる（乱数が入っていないか確認）</span>');
+
+log('');
+log('== 4. 3色が分かれることの検算 ==');
+var exs=[
+ {name:'A 制約なし',       st:{action:'a_climb', cons:[]}},
+ {name:'B 30秒+障害2種',   st:{action:'a_climb', cons:[{id:'c_time',num:30},{id:'c_phys',num:2}]}},
+ {name:'C 待つ×10秒',      st:{action:'a_ambush', cons:[{id:'c_time',num:10}]}},
+ {name:'D 数値のない制約', st:{action:'a_climb', cons:[{id:'c_time',num:''}]}}
+];
+exs.forEach(function(e){ var r=CT.judge(e.st); log(e.name+' → '+chip(r)+' '+r.reason+'　直す場所: '+(r.fixes[0]||'なし')); });
+
+log('');
+log('== 5. 境目の数値テスト ==');
+[9,10,49,50].forEach(function(v){ log('時間 '+v+'秒 → '+CT.band('c_time',v)); });
+[1,2,4,5].forEach(function(v){ log('物理 '+v+'種 → '+CT.band('c_phys',v)); });
+[24,25,94,95].forEach(function(v){ log('情報 '+v+'% → '+CT.band('c_info',v)); });
+
+document.getElementById('out').innerHTML=L.join('\n');
+});
+</script>
+</body>
+</html>

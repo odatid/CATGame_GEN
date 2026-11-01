@@ -1,0 +1,83 @@
+/* CATGame_GEN v0.2.0 — 画面。1画面1つのこと。わからないで進める。戻れる。保存される。 */
+:root{
+  --bg:#141414; --panel:#1e1d1b; --panel2:#262421; --line:#3a3733;
+  --ink:#f2f0eb; --sub:#bdbab2; --accent:#e8873d; --accent2:#f7c59f;
+  --green:#7ddb7d; --yellow:#f0e3a8; --red:#ff9d9d;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;line-height:1.7}
+button{font-family:inherit}
+.bar{position:sticky;top:0;background:rgba(20,20,20,.94);border-bottom:1px solid var(--line);z-index:5}
+.bar-in{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:10px 16px;gap:12px;flex-wrap:wrap}
+.wordmark{display:flex;flex-direction:column;text-decoration:none;color:var(--ink)}
+.wm-main{font-weight:900;letter-spacing:.04em}
+.wm-main .slash{color:var(--accent)}
+.wm-sub{font-size:.72rem;color:var(--sub)}
+.bar-right{display:flex;align-items:center;gap:8px}
+.ver{display:inline-block;padding:4px 12px;border:1px solid var(--line);border-radius:999px;font-size:.72rem;color:var(--sub)}
+.icon-btn{background:none;border:1px solid var(--line);color:var(--sub);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.78rem}
+.icon-btn:hover{border-color:var(--accent);color:var(--ink)}
+/* 役割バー（いま誰の番） */
+.rolebar{max-width:960px;margin:10px auto 0;padding:0 16px}
+.rolebar-in{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:.8rem;color:var(--sub);display:flex;gap:14px;flex-wrap:wrap}
+.rolebar-in b{color:var(--accent2);font-weight:600}
+.shell{max-width:960px;margin:0 auto;padding:18px 16px 60px;display:flex;gap:18px}
+.rail{width:170px;flex:none}
+.rail button{display:flex;width:100%;gap:8px;align-items:baseline;background:none;border:none;border-left:3px solid var(--line);
+  color:var(--sub);padding:7px 10px;text-align:left;cursor:pointer;font-size:.82rem}
+.rail button .n{font-family:monospace;font-size:.72rem}
+.rail button.on{border-left-color:var(--accent);color:var(--ink);font-weight:700}
+.rail button.done{color:var(--green)}
+.rail button:disabled{opacity:.4;cursor:not-allowed}
+.app{flex:1;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-bottom:16px}
+.eyebrow{font-size:.72rem;letter-spacing:.14em;color:var(--accent);margin-bottom:6px}
+h2.step{margin:0 0 8px;font-size:1.3rem;font-weight:900;letter-spacing:.02em}
+p.lead{margin:0 0 14px;color:var(--sub);font-size:.9rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:999px;padding:7px 14px;cursor:pointer;font-size:.85rem}
+.chip:hover{border-color:var(--accent)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#1a1208;font-weight:700}
+.chip.small{padding:4px 10px;font-size:.76rem}
+.lbl{margin:16px 0 8px;font-size:.85rem;color:var(--accent2);font-weight:700}
+.lbl:first-child{margin-top:0}
+input[type=text],input[type=number]{background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--ink);
+  padding:9px 12px;font-size:.95rem;width:100%;font-family:inherit}
+input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.cons-row{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.cons-row .cname{min-width:52px;font-size:.85rem}
+.cons-row .ctpl{flex:1;min-width:200px;font-size:.85rem;color:var(--sub)}
+.cons-row input{width:110px}
+.cons-row .unit{font-size:.8rem;color:var(--sub);min-width:34px}
+.cons-row .del{background:none;border:1px solid var(--line);border-radius:6px;color:var(--sub);cursor:pointer;padding:4px 8px}
+.verdict{border-radius:12px;padding:18px 20px;font-size:1.05rem;font-weight:900;letter-spacing:.04em}
+.verdict.green{background:#17301c;color:var(--green);border:1px solid #2c5c38}
+.verdict.yellow{background:#3a331a;color:var(--yellow);border:1px solid #6b5c2c}
+.verdict.red{background:#38191a;color:var(--red);border:1px solid #6b2c2c}
+.verdict.empty{background:var(--panel2);color:var(--sub);border:1px solid var(--line)}
+.reason{margin:12px 0 4px;font-size:.92rem}
+.fixes{margin:6px 0 0;padding-left:1.2em;color:var(--accent2);font-size:.85rem}
+.oneline{background:var(--panel2);border-left:4px solid var(--accent);border-radius:8px;padding:12px 16px;font-size:1.02rem;font-weight:700;margin:12px 0}
+.agree{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:12px 16px;margin-top:16px;font-size:.85rem;color:var(--sub)}
+.agree label{display:flex;gap:8px;align-items:center;cursor:pointer}
+.agree input{width:auto}
+.agree textarea,.agree input[type=text]{margin-top:8px}
+textarea{background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--ink);padding:9px 12px;font-size:.9rem;width:100%;font-family:inherit;min-height:64px}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
+.btn{background:var(--accent);border:none;color:#1a1208;font-weight:900;border-radius:10px;padding:11px 22px;cursor:pointer;font-size:.92rem;letter-spacing:.03em}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--sub);font-weight:400}
+.btn:hover{filter:brightness(1.1)}
+.outtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.outtabs .chip{font-family:monospace}
+.outmeta{font-size:.75rem;color:var(--sub);margin-bottom:6px}
+pre.out{background:#0e0e0d;border:1px solid var(--line);border-radius:10px;padding:14px;overflow:auto;max-height:340px;font-size:.74rem;line-height:1.55;white-space:pre-wrap;word-break:break-all}
+canvas.preview{background:#0e0e0d;border:1px solid var(--line);border-radius:10px;display:block;margin:10px auto}
+.foot{max-width:960px;margin:0 auto;padding:16px;color:var(--sub);font-size:.72rem;border-top:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(80px);background:var(--accent);color:#1a1208;
+  font-weight:700;border-radius:999px;padding:10px 22px;opacity:0;transition:.25s;z-index:9}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+a{color:var(--accent2)}
+@media(max-width:720px){ .shell{flex-direction:column} .rail{width:100%;display:flex;overflow-x:auto;gap:2px}
+  .rail button{border-left:none;border-bottom:3px solid var(--line);white-space:nowrap} .rail button.on{border-bottom-color:var(--accent)} }
+@media(prefers-reduced-motion:reduce){ *{transition:none!important;animation:none!important} }
