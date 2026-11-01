@@ -1,6 +1,9 @@
 /* =========================================================
-   CATGame_GEN v0.2.0 — 画面（9ステップ＋役割バー）
-   1画面1つのこと／わからないで進める／戻れる／途中保存（catgame.v1）
+   CATGame_GEN v0.3.0 — 画面（9ステップ＋役割バー）
+   v0.3.0の変更: 出力タブ切替のバグ修正/候補は各3つまで+カテゴリ別その他/
+   目的を12カテゴリから選ぶ/手段は中心+サブ+組み立て案3種/
+   しばりはおすすめ4案+引き直し+自分で決める/点検にゲーム性チェック4軸/
+   ネコの見た目は柄10種/ゲーム案にEMS注釈と具体障害
    ========================================================= */
 (function(){
 'use strict';
@@ -23,9 +26,12 @@ const STEPS = [
 function fresh(){
   return {step:'intro', tab:'plan', title:'',
     roles:{shikiri:'', kiroku:'', tedate:'', shibari:''},
-    profile:{good:[], bad:[], feat:[], target:[], other:''},
-    purpose:'', persona:'', action:'', coat:'shima',
-    cons:[], agree:{}, retro:{}};
+    profile:{good:[], bad:[], feat:[], target:[],
+             other:{good:'', bad:'', feat:'', target:''}},
+    purpose:'', purposeOther:'', persona:'',
+    action:'', variant:0, subAction:'', coat:'shima',
+    consMode:'pack', packPage:0, packLabel:'', cons:[],
+    agree:{}, retro:{}};
 }
 let state = fresh();
 
@@ -33,11 +39,14 @@ function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e
 function load(){
   try{
     const raw = localStorage.getItem(KEY);
-    if(raw){ const o = JSON.parse(raw); if(o && o.step){ state = Object.assign(fresh(), o); } }
+    if(raw){ const o = JSON.parse(raw); if(o && o.step){
+      const f = fresh(); state = Object.assign(f, o);
+      f.profile.other = {good:'', bad:'', feat:'', target:''};
+      state.profile.other = Object.assign(f.profile.other, (o.profile && o.profile.other) || {});
+    } }
   }catch(e){}
 }
 
-/* ---------------- 小道具 ---------------- */
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function toast(msg){ if(!toastEl) return; toastEl.textContent = msg; toastEl.classList.add('on');
   clearTimeout(toast._t); toast._t = setTimeout(()=>toastEl.classList.remove('on'), 1600); }
@@ -48,9 +57,7 @@ function copyText(text, btn){
   function fb(){ const ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.left='-9999px';
     document.body.appendChild(ta); ta.select(); try{ document.execCommand('copy'); done(); }catch(e){ toast('コピーできませんでした'); } document.body.removeChild(ta); }
 }
-const id = () => 'ct' + Math.floor((function(){ let h=0; for(let i=0;i<8;i++){ h = (h*31 + new Date().getMilliseconds() + i) % 1e9; } return h; })());
 
-/* ---------------- 役割バー ---------------- */
 function renderRolebar(){
   const el = $('#rolebar');
   const st = STEPS.find(s=>s.id===state.step) || STEPS[0];
@@ -61,8 +68,6 @@ function renderRolebar(){
     + '｜てだて役: ' + esc(r.tedate || '未入力')
     + '｜しばり役: ' + esc(r.shibari || '未入力') + '</div>';
 }
-
-/* ---------------- レール ---------------- */
 function renderRail(){
   const idx = STEPS.findIndex(s=>s.id===state.step);
   railEl.innerHTML = STEPS.map((s,i)=>{
@@ -73,13 +78,14 @@ function renderRail(){
   }).join('');
 }
 
-/* ---------------- 共通部品 ---------------- */
 function chips(arr, key, multi){
   return '<div class="chips">' + arr.map(o=>{
-    const cur = multi ? state.profile[key] : null;
-    const on = multi ? cur.indexOf(o.id)>=0 : state[key]===o.id;
+    const on = multi ? state.profile[key].indexOf(o.id)>=0 : state[key]===o.id;
     return '<button type="button" class="chip'+(on?' on':'')+'" data-pick="'+key+'" data-id="'+o.id+'" data-multi="'+(multi?1:0)+'">'+esc(o.label)+'</button>';
   }).join('') + '</div>';
+}
+function otherInput(cat){
+  return '<input type="text" data-othcat="'+cat+'" placeholder="その他・自由記入（ここに出したものがいちばん強ければ、選ばなくてよい）" value="'+esc(state.profile.other[cat]||'')+'">';
 }
 function agreeBlock(key, label){
   const a = state.agree[key] || {agree:true, reason:''};
@@ -94,17 +100,16 @@ function nav(prev, next, nextLabel){
     + '</div>';
 }
 function catCanvas(pose, coat){
-  return '<canvas class="preview" width="180" height="200" data-catpose="'+pose+'" data-coat="'+(coat||state.coat)+'"></canvas>';
+  return '<canvas class="preview" width="140" height="160" data-catpose="'+pose+'" data-coat="'+(coat||state.coat)+'"></canvas>';
 }
 function drawPreviews(){
   document.querySelectorAll('canvas[data-catpose]').forEach(cv=>{
     const ctx = cv.getContext('2d');
     ctx.clearRect(0,0,cv.width,cv.height);
-    CT.drawCat(ctx, cv.width/2, cv.height-14, 44, cv.dataset.catpose, 1, 1, 1, {mode:cv.dataset.coat||'shima'});
+    CT.drawCat(ctx, cv.width/2, cv.height-12, 38, cv.dataset.catpose, 1, 1, 1, cv.dataset.coat);
   });
 }
 
-/* ---------------- 各ステップ ---------------- */
 const R = {};
 
 R.intro = () => [
@@ -112,9 +117,9 @@ R.intro = () => [
 '<h2 class="step">ゲームは「目的・手段・制約」でできている。</h2>',
 '<p class="lead">EMS（Ends and Means Structure／手段目的構造）を、グループで1本のネコのゲーム案にまとめます。ツールは案を作って配りません。あなたたちが書いた3つを点検して返します。</p>',
 '<div class="lbl">E ＝ Ends（目的）</div><p class="lead" style="margin:0">プレイヤーが欲しい状態を1文で。「◯◯するゲーム」。</p>',
-'<div class="lbl">M ＝ Means（手段）</div><p class="lead" style="margin:0">プレイヤーが使える操作。ネコの行動から1つだけ。</p>',
+'<div class="lbl">M ＝ Means（手段）</div><p class="lead" style="margin:0">プレイヤーが使える操作。ネコのアクションから中心の1つ（＋サブ1つ）。</p>',
 '<div class="lbl">S ＝ Structure（構造）</div><p class="lead" style="margin:0">制約はここに加える刺激。「〜せずに」「〜しながら」。数値で決める。</p>',
-'<div class="lbl">点検は3色</div><p class="lead" style="margin:0">あまい（黄）／むり（赤）／ちょうどよい（緑）。点数は出ません。理由を1文つけます。</p>',
+'<div class="lbl">点検は ゲーム性チェック ＋ 3色</div><p class="lead" style="margin:0">ユニークさ・ひねり・おかしさ・共感 の4軸と、あまい（黄）／むり（赤）／ちょうどよい（緑）。点数は出ません。理由を1文つけます。</p>',
 '<div class="lbl">役割（4人。人数は可変）</div>',
 '<div class="cons-row"><span class="cname">しきり役</span><input type="text" data-role="shikiri" placeholder="なまえ" value="'+esc(state.roles.shikiri)+'"></div>',
 '<div class="cons-row"><span class="cname">記録役</span><input type="text" data-role="kiroku" placeholder="なまえ" value="'+esc(state.roles.kiroku)+'"></div>',
@@ -126,44 +131,63 @@ nav(null, 'profile', 'はじめる →')
 R.profile = () => [
 '<section class="card"><div class="eyebrow">STEP 01 / ネコのこと</div>',
 '<h2 class="step">ネコを知る（ワークの総意を入れる）</h2>',
-'<p class="lead">グループで出し合った内容から、近いものを選びます。足りなければ「その他」に書く。</p>',
-'<div class="lbl">ネコが得意なこと（いくつでも）</div>' + chips(CT.CANDS.good, 'good', true),
-'<div class="lbl">ネコが苦手なもの（いくつでも）</div>' + chips(CT.CANDS.bad, 'bad', true),
-'<div class="lbl">ネコの特徴・かわいいところ（いくつでも）</div>' + chips(CT.CANDS.feat, 'feat', true),
-'<div class="lbl">このゲームを買う人（いくつでも）</div>' + chips(CT.CANDS.target, 'target', true),
-'<div class="lbl">その他のメモ</div><input type="text" data-profile-other placeholder="グループが出した言葉をそのまま" value="'+esc(state.profile.other)+'">',
+'<p class="lead">各グループ、<b>特に強く出た意見を3つまで</b>選びます。足りなければ「その他」に書く。</p>',
+'<div class="lbl">ネコが得意なこと（3つまで）</div>' + chips(CT.CANDS.good, 'good', true) + otherInput('good'),
+'<div class="lbl">ネコが苦手なもの（3つまで）</div>' + chips(CT.CANDS.bad, 'bad', true) + otherInput('bad'),
+'<div class="lbl">ネコの特徴・かわいいところ（3つまで）</div>' + chips(CT.CANDS.feat, 'feat', true) + otherInput('feat'),
+'<div class="lbl">猫のゲームを買う人（3つまで）</div>' + chips(CT.CANDS.target, 'target', true) + otherInput('target'),
 nav('intro', 'purpose')
 ].join('');
 
 R.purpose = () => [
 '<section class="card"><div class="eyebrow">STEP 02 / ねらい（目的・E）</div>',
-'<h2 class="step">ネコに何をさせたい？</h2>',
-'<p class="lead">1文で。わからなければ近いものを選ぶ。</p>',
-chips(CT.PURPOSES, 'purpose', false),
-'<div class="lbl">ペルソナの課題（この型で書く）</div>',
+'<h2 class="step">作りたいゲームはどれ？（ネコに何をさせたい？）</h2>',
+'<p class="lead">ここで作りたいゲームを決めます。漠然としているときは、この中から選べば企画になります。カテゴリごとに並んでいます。</p>',
+CT.PURPOSE_GROUPS.map(g=>'<div class="lbl">'+esc(g.label)+'</div>' + chips(g.items, 'purpose', false)).join(''),
+'<div class="lbl">その他（ここに書けば、それが目的になります）</div>',
+'<input type="text" data-purposeother placeholder="自由に書く（例: ネコがケーキを守る）" value="'+esc(state.purposeOther||'')+'">',
+'<div class="lbl">' + esc(CT.PERSONA_LABEL) + '</div>',
 '<div class="cons-row"><input type="text" data-persona-a placeholder="◯◯したい" value="'+esc((state.persona||'').split('のに')[0]||'')+'"><span class="unit">のに</span></div>',
 '<div class="cons-row"><input type="text" data-persona-b placeholder="□□でできない" value="'+esc(((state.persona||'').split('のに')[1]||'').replace('でできない',''))+'"><span class="unit">でできない</span></div>',
+'<p class="lead" style="margin-top:6px">' + esc(CT.PERSONA_EX) + '</p>',
 agreeBlock('purpose', 'ねらいは しきり役 がまとめて全員に確認'),
 nav('profile', 'action')
 ].join('');
 
-R.action = () => [
+R.action = () => {
+  const act = CT.ACTIONS.find(a=>a.id===state.action);
+  const rest = CT.ACTIONS.filter(a=>a.id!==state.action);
+  return [
 '<section class="card"><div class="eyebrow">STEP 03 / てだて（手段・M）</div>',
-'<h2 class="step">ネコの行動を1つ選ぶ（操作は1つだけ）</h2>',
-'<p class="lead">選ぶと、そのまま操作になる動詞が出ます。</p>',
+'<h2 class="step">このゲームで中心となる猫のアクションは？</h2>',
+'<p class="lead">1つ選ぶと「ゲームになる組み立て」が3つ出ます。選び直せます。</p>',
 chips(CT.ACTIONS, 'action', false),
-(state.action ? '<div class="oneline">'+esc((CT.ACTIONS.find(a=>a.id===state.action)||{}).verb)+'（' + esc((CT.ACTIONS.find(a=>a.id===state.action)||{}).note) + '）</div>' : ''),
-'<div class="lbl">ネコの見た目（柄は3種まで。あとで変わります）</div>',
-'<div class="chips">'+['shima','madara','tan'].map(m=>'<button type="button" class="chip'+(state.coat===m?' on':'')+'" data-coat="'+m+'">'+({shima:'しま',madara:'まだら',tan:'単色'}[m])+'</button>').join('')+'</div>',
-catCanvas('idle'),
-(state.action ? '<p class="lead">'+esc((CT.ACTIONS.find(a=>a.id===state.action)||{}).why)+'</p>' : ''),
+(act ? [
+'<div class="lbl">組み立て（このゲームでは、どう使う？）</div>',
+'<div class="chips">' + act.variants.map((v,i)=>'<button type="button" class="chip'+(state.variant===i?' on':'')+'" data-variant="'+i+'">'+esc(v)+'</button>').join('') + '</div>',
+'<div class="lbl">サブとなるアクション（任意・ゲームが成立するか不安なときは足す）</div>',
+'<div class="chips"><button type="button" class="chip'+(!state.subAction?' on':'')+'" data-sub="">サブなし</button>'
+  + rest.map(a=>'<button type="button" class="chip'+(state.subAction===a.id?' on':'')+'" data-sub="'+a.id+'">'+esc(a.label)+'</button>').join('') + '</div>',
+'<p class="lead">' + esc(act.why) + '</p>'
+] : ['<p class="lead">わからないときは、あとで決めてよい（先へ進めます）。</p>']).join(''),
+'<div class="lbl">ネコの見た目（柄10種。クリックで選ぶ・絵が変わります）</div>',
+'<div class="coatgrid">' + CT.COATS.map(c=>'<button type="button" class="coatcard'+(state.coat===c.id?' on':'')+'" data-coat="'+c.id+'">' + catCanvas('idle', c.id) + '<span>'+esc(c.label)+'</span></button>').join('') + '</div>',
+catCanvas(state.action ? (state.variant===2?'run':'idle') : 'idle', state.coat),
 agreeBlock('action', '手段は てだて役 が決めて全員に確認'),
 nav('purpose', 'cons')
-].join('');
+  ].join('');
+};
 
 R.cons = () => {
   const used = state.cons.map(c=>c.id);
   const rest = CT.CONSTRAINTS.filter(c=>used.indexOf(c.id)<0);
+  const start = state.packPage * CT.PACKS_PAGE;
+  const page = CT.PACKS.slice(start, start + CT.PACKS_PAGE);
+  const ob = (state.profile.bad.length ? (CT.CANDS.bad.find(b=>b.id===state.profile.bad[0])||{}).label : '') || '掃除機';
+  const packs = page.map(p=>{
+    const on = JSON.stringify(state.cons.map(c=>c.id+c.num)) === JSON.stringify(p.items.map(i=>i.id+i.num));
+    return '<button type="button" class="packbtn'+(on?' on':'')+'" data-pack="'+p.id+'"><b>'+esc(p.label)+'</b><span>'+esc(p.text.split('{obstacle}').join(ob))+'</span></button>';
+  }).join('');
   const rows = state.cons.map((c,i)=>{
     const def = CT.CONSTRAINTS.find(d=>d.id===c.id);
     return '<div class="cons-row"><span class="cname">'+esc(def.label)+'</span>'
@@ -172,12 +196,23 @@ R.cons = () => {
       + '<span class="unit">'+esc(def.unit)+'</span>'
       + '<button type="button" class="del" data-consdel="'+i+'">外す</button></div>';
   }).join('');
+  const manual = state.consMode==='manual'
+    ? (rest.length ? '<div class="chips">' + rest.map(c=>'<button type="button" class="chip" data-consadd="'+c.id+'">＋ '+esc(c.label)+'</button>').join('') + '</div>' : '<p class="lead">3つ入っています。</p>')
+    : '';
   return [
 '<section class="card"><div class="eyebrow">STEP 04 / しばり（制約・Sに加える刺激）</div>',
-'<h2 class="step">目的を邪魔するルールを、数値で決める</h2>',
-'<p class="lead">3つまで。数値のない制約は「未記入」として扱い、緑になりません。</p>',
-rows + (rest.length ? '<div class="chips">' + rest.map(c=>'<button type="button" class="chip" data-consadd="'+c.id+'">＋ '+esc(c.label)+'</button>').join('') + '</div>' : '<p class="lead">3つ入っています。</p>'),
-'<div class="lbl">制約なしで進むこともできます（点検で「あまい」に戻ってきます）</div>',
+'<h2 class="step">どんなルールなら、頑張りたくなる？</h2>',
+'<p class="lead">しばりがあるとゲームはぐっと面白くなります。おすすめを4つ出します。<b>選んだら数値はその場で変えてよい</b>（点検でまた見られます）。</p>',
+'<div class="packgrid">' + packs + '</div>',
+'<div class="chips" style="margin-top:10px">'
+  + '<button type="button" class="chip" data-packpage>別の案を出す（おすすめを引き直す）</button>'
+  + '<button type="button" class="chip'+(state.consMode==='manual'?' on':'')+'" data-manual>自分で決める（型から選ぶ）</button>'
+  + (state.cons.length ? '<button type="button" class="chip" data-consclear>選び直す（しばりを空にする）</button>' : '')
+  + '</div>',
+(state.cons.length ? '<div class="lbl">いまのしばり（数値は自由に変えられます）</div>' + rows : ''),
+manual,
+'<div class="lbl">出てくる障害（具体）</div>',
+'<p class="lead" style="margin:0">' + esc(ob) + '（「ネコのこと」で選んだ苦手から。変えたければ STEP 01 で選び直す）</p>',
 agreeBlock('cons', 'しばりは しばり役 が決めて全員に確認'),
 nav('action', 'check', '点検へ →')
   ].join('');
@@ -185,15 +220,20 @@ nav('action', 'check', '点検へ →')
 
 R.check = () => {
   const J = CT.judge(state);
+  const G = CT.gameCheck(state);
   const W = CT.JUDGE_WORDS[J.color];
+  const P = CT.planOf(state);
   return [
 '<section class="card"><div class="eyebrow">STEP 05 / 点検</div>',
-'<h2 class="step">EMS点検（点数でなく3色）</h2>',
+'<h2 class="step">ゲーム性チェック</h2>',
+G.map(g=>'<div class="checkrow"><span class="ax">'+esc(g.name)+'</span><span class="mark m'+g.mark+'">'+g.mark+'</span><span class="cm">'+esc(g.comment)+'</span></div>').join(''),
+'<div class="lbl">EMS判定（点数でなく3色）</div>',
 '<div class="verdict '+J.color+'">'+esc(W.word)+'（'+J.color+'）</div>',
 '<p class="reason">'+esc(J.reason)+'</p>',
 (J.fixes.length ? '<ul class="fixes">'+J.fixes.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>' : ''),
-(state.action ? '<div class="oneline">'+esc(CT.goalOf(CT.planOf(state))!=='' ? '':'') + esc((CT.ACTIONS.find(a=>a.id===state.action)||{}).verb)+'</div>' : ''),
-'<p class="lead">わからないままでも先に進めます（止まりません）。直したら「もう一度点検」。</p>',
+'<div class="lbl">いまの案（EMS）</div>',
+'<div class="oneline">'+esc(CT.oneLine(P))+'</div>',
+'<p class="lead">わからないままでも先に進めます（止まりません）。直したら、もう一度この画面に戻ってくれば再点検されます。</p>',
 '<div class="nav"><button type="button" class="btn ghost" data-go="cons">← 直す（しばり）</button>'
  + '<button type="button" class="btn ghost" data-go="action">← 直す（てだて）</button>'
  + '<button type="button" class="btn" data-go="plan">ゲーム案へ →</button></div>'
@@ -202,17 +242,20 @@ R.check = () => {
 
 R.plan = () => {
   const P = CT.planOf(state);
-  const one = 'ネコが' + (P.action ? P.action.verb : '（手段）') + 'して、'
-    + (P.cons.length ? P.cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') + '、' : '')
-    + CT.goalOf(P) + 'ゲーム。';
   return [
 '<section class="card"><div class="eyebrow">STEP 06 / ゲーム案</div>',
 '<h2 class="step">1本にまとめる（ここで初めてタイトル）</h2>',
-'<div class="oneline">'+esc(one)+'</div>',
+'<div class="oneline">'+esc(CT.oneLine(P))+'</div>',
+'<div class="lbl">EMSで見る（注釈つき）</div>',
+'<div class="emsblock">',
+'<div class="emsrow"><span class="emstag">目的（E）</span>' + esc(CT.goalOf(P) || '未記入') + '</div>',
+'<div class="emsrow"><span class="emstag">手段（M）</span>中心: ' + esc(P.centerVerb || '未記入') + (P.subVerb ? '　／　サブ: ' + esc(P.subVerb) : '') + '</div>',
+'<div class="emsrow"><span class="emstag">制約（S）</span>' + esc(P.cons.length ? P.cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') + (P.packLabel ? '（' + P.packLabel + '）' : '') : '未記入') + '</div>',
+'<div class="emsrow"><span class="emstag">障害（具体）</span>' + esc(P.obstacles.join('、')) + '</div>',
+'<div class="emsrow"><span class="emstag">成功条件</span>' + esc(P.success) + '</div>',
+'</div>',
 '<div class="lbl">タイトル（空なら自動で入ります）</div>',
 '<input type="text" data-title placeholder="ネコが〜するゲーム" value="'+esc(state.title)+'">',
-'<div class="lbl">今日の学び（EMS）</div>',
-'<p class="lead" style="margin:0">ゲームは「目的・手段・制約」の構造でできている。私たちはその3つを自分たちで決めた。</p>',
 '<div class="lbl">展開（つくり方の目安）</div>',
 '<p class="lead" style="margin:0">'+CT.PHASES.map(p=>esc(p.at+' '+p.name)).join('<br>')+'</p>',
 nav('check', 'out', '出力へ →')
@@ -221,13 +264,15 @@ nav('check', 'out', '出力へ →')
 
 R.out = () => {
   const J = CT.judge(state);
-  const outs = CT.buildAll(state, J);
+  const G = CT.gameCheck(state);
+  const outs = CT.buildAll(state, J, G);
   const names = {plan:'企画書', image:'イメージ1枚', assets:'素材シート', web:'Webプロト', unity:'Unity依頼', proposal:'提案書'};
   const tab = state.tab || 'plan';
+  if(!outs[tab]) state.tab = tab = 'plan';
   return [
 '<section class="card"><div class="eyebrow">STEP 07 / 出力</div>',
 '<h2 class="step">6種をコピーして、AIに貼る</h2>',
-'<p class="lead">Webプロトが授業の到達点。Unity依頼は後日の移植実験用です。字数はそのまま出ます（無料枠に入るかは、貼る側で数えてください）。</p>',
+'<p class="lead">Webプロトが授業の到達点。Unity依頼は後日の移植実験用。字数はそのまま出ます。</p>',
 '<div class="outtabs">'+Object.keys(outs).map(k=>'<button type="button" class="chip'+(tab===k?' on':'')+'" data-tab="'+k+'">'+names[k]+'</button>').join('')+'</div>',
 '<div class="outmeta">'+esc(names[tab])+' — '+outs[tab].length.toLocaleString()+'字（決定的に組み立てました・乱数なし）</div>',
 '<pre class="out">'+esc(outs[tab])+'</pre>',
@@ -253,7 +298,6 @@ nav('out', null)
   ].join('');
 };
 
-/* ---------------- 描画とイベント ---------------- */
 function render(){
   const fn = R[state.step] || R.intro;
   app.innerHTML = fn();
@@ -265,7 +309,9 @@ function toggle(key, vid, multi){
   if(multi){
     const arr = state.profile[key];
     const i = arr.indexOf(vid);
-    if(i>=0) arr.splice(i,1); else arr.push(vid);
+    if(i>=0){ arr.splice(i,1); return; }
+    if(arr.length >= CT.PICK_LIMIT){ toast('3つまでです（いちばん強い意見を残す）'); return; }
+    arr.push(vid);
   } else {
     state[key] = (state[key]===vid) ? '' : vid;
   }
@@ -274,12 +320,19 @@ function toggle(key, vid, multi){
 document.addEventListener('click', e=>{
   const t = e.target.closest('button, input[type=checkbox]');
   if(!t) return;
-  if(t.dataset.go !== undefined && t.dataset.go !== ''){ if(t.disabled) return; state.step = t.dataset.go; if(t.dataset.go==='out' && !state.tab) state.tab='plan'; render(); window.scrollTo(0,0); return; }
+  if(t.dataset.tab){ state.tab = t.dataset.tab; render(); return; }
+  if(t.dataset.go !== undefined && t.dataset.go !== ''){ if(t.disabled) return; state.step = t.dataset.go; render(); window.scrollTo(0,0); return; }
   if(t.dataset.pick){ toggle(t.dataset.pick, t.dataset.id, t.dataset.multi==='1'); render(); return; }
   if(t.dataset.coat){ state.coat = t.dataset.coat; render(); return; }
-  if(t.dataset.consadd){ if(state.cons.length<3){ state.cons.push({id:t.dataset.consadd, num:(CT.CONSTRAINTS.find(c=>c.id===t.dataset.consadd)||{}).num}); } render(); return; }
+  if(t.dataset.variant !== undefined && t.dataset.variant !== ''){ state.variant = +t.dataset.variant; render(); return; }
+  if(t.dataset.sub !== undefined){ state.subAction = t.dataset.sub; if(t.dataset.sub==='') { state.subAction=''; } render(); return; }
+  if(t.dataset.pack){ const p = CT.PACKS.find(x=>x.id===t.dataset.pack); if(p){ state.cons = p.items.map(i=>({id:i.id, num:i.num})); state.packLabel = p.label; state.consMode='pack'; } render(); return; }
+  if(t.dataset.packpage !== undefined && t.dataset.packpage !== ''){ state.packPage = (state.packPage+1) % Math.ceil(CT.PACKS.length/CT.PACKS_PAGE); render(); return; }
+  if(t.dataset.manual !== undefined && t.dataset.manual !== ''){ state.consMode = 'manual'; render(); return; }
+  if(t.dataset.consclear !== undefined && t.dataset.consclear !== ''){ state.cons = []; state.packLabel=''; render(); return; }
+  if(t.dataset.consadd){ if(state.cons.length<3){ state.cons.push({id:t.dataset.consadd, num:(CT.CONSTRAINTS.find(c=>c.id===t.dataset.consadd)||{}).num}); state.packLabel=''; } render(); return; }
   if(t.dataset.consdel !== undefined && t.dataset.consdel !== ''){ state.cons.splice(+t.dataset.consdel, 1); render(); return; }
-  if(t.dataset.copy){ const J = CT.judge(state); const outs = CT.buildAll(state, J); copyText(outs[t.dataset.copy], t); return; }
+  if(t.dataset.copy){ const J=CT.judge(state), G=CT.gameCheck(state); const outs = CT.buildAll(state, J, G); copyText(outs[t.dataset.copy], t); return; }
   if(t.dataset.retro){ state.retro[t.dataset.retro] = t.dataset.v; render(); return; }
   if(t.dataset.agree !== undefined && t.dataset.agree !== ''){
     const a = state.agree[t.dataset.agree] || {agree:true, reason:''};
@@ -290,16 +343,16 @@ document.addEventListener('click', e=>{
 document.addEventListener('input', e=>{
   const t = e.target;
   if(t.dataset.role !== undefined){ state.roles[t.dataset.role] = t.value; save(); renderRolebar(); return; }
-  if(t.dataset.profileOther !== undefined){ state.profile.other = t.value; save(); return; }
+  if(t.dataset.othcat !== undefined){ state.profile.other[t.dataset.othcat] = t.value; save(); return; }
   if(t.dataset.personaA !== undefined){ state.persona = t.value + 'のに' + ((state.persona||'').split('のに')[1]||''); save(); return; }
   if(t.dataset.personaB !== undefined){ state.persona = (state.persona||'').split('のに')[0] + 'のに' + t.value + 'でできない'; save(); return; }
+  if(t.dataset.purposeother !== undefined){ state.purposeOther = t.value; save(); return; }
   if(t.dataset.consnum !== undefined){ state.cons[+t.dataset.consnum].num = t.value; save(); return; }
   if(t.dataset.agreereason !== undefined){ const a = state.agree[t.dataset.agreereason] || {agree:false, reason:''}; a.reason = t.value; state.agree[t.dataset.agreereason] = a; save(); return; }
   if(t.dataset.title !== undefined){ state.title = t.value; save(); return; }
   if(t.dataset.retrotext !== undefined){ state.retro[t.dataset.retrotext] = t.value; save(); return; }
 });
 
-/* ヘッダ */
 function bindHeader(){
   const chip = $('#verChip'), panel = $('#verPanel');
   if(chip && CT.VERSION) chip.textContent = CT.VERSION.tag;

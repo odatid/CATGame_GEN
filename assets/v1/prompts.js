@@ -1,76 +1,95 @@
 /* =========================================================
-   CATGame_GEN — 出力層 v0.2.0（6種）
-   すべて「DB＋ID参照」から決定的に組み立てる。生成AIのAPIは使わない。
-   同じ入力なら必ず同じ出力（乱数なし）。
-   継承: PK//PROTO の出力プロトコル・拘束文・参照コード・演出仕様。
-   変更点: 被写体を猫に。Webプロトには「HTML1ファイル拘束」を最初から入れる
-   （現行mainに無かったことを実測済み・2026-11-01）。
+   CATGame_GEN — 出力層 v0.3.0（6種・決定的組み立て・乱数なし）
+   v0.3.0の変更: 手段=中心+サブ・組み立て案（variants）反映/
+   障害を具体名で（グループが選んだ「苦手」から）/
+   企画書・提案書にEMS注釈つき/ネコの見た目（柄バリエーション）を出力に反映
    ------------------------------------------------------------ */
 window.CT = window.CT || {};
 (function(){
 'use strict';
-
 const F = '```';
-/* PK時代の語を猫に置き換える（組み立て時に決定的に） */
-function pk(t){ return String(t).split('ピコ太郎').join('ネコ').split('Pico').join('Cat').split('pico').join('cat').split('ピコ').join('ネコ'); }
 
+/* PK時代の語を猫に置き換える（組み立て時に決定的に） */
+function pk(t){
+  return String(t)
+    .split('ピコ太郎').join('ネコ')
+    .split('ピコ').join('ネコ')
+    .split('Pico').join('Cat')
+    .split('pico').join('cat');
+}
 
 /* ---------------- 状態→案（plan） ---------------- */
 function planOf(st){
   st = st || {};
   const act = CT.ACTIONS.find(a=>a.id===st.action) || null;
-  const pur = CT.PURPOSES.find(p=>p.id===st.purpose) || null;
-  const cons = (st.cons||[]).map(c=>({
-    def: CT.CONSTRAINTS.find(d=>d.id===c.id),
-    num: parseFloat(c.num)
-  })).filter(c=>c.def && isFinite(c.num));
+  const v = (typeof st.variant==='number' && act && act.variants[st.variant]) ? st.variant : 0;
+  const centerVerb = act ? act.variants[v] : '';
+  const sub = CT.ACTIONS.find(a=>a.id===st.subAction) || null;
+  let pur = CT.PURPOSES.find(p=>p.id===st.purpose) || null;
+  if(st.purposeOther && st.purposeOther.trim()){ pur = pur || {id:'p_custom', label:'その他', goal:st.purposeOther.trim(), rates:{uni:1,twi:0,fun:1,emp:1}}; }
+  const cons = (st.cons||[]).map(c=>({ def: CT.CONSTRAINTS.find(d=>d.id===c.id), num: parseFloat(c.num) }))
+    .filter(c=>c.def && isFinite(c.num));
   const tc = cons.find(c=>c.def.id==='c_time');
   const dur = tc ? tc.num : 30;
   const consText = cons.map(c=>'・'+c.def.tpl.replace('◯◯', String(c.num))).join('\n');
-  const success = cons.length
-    ? consText.replace(/・/g, '') + '、' + (pur ? pur.goal : '目的を達成する')
-    : (pur ? pur.goal : '目的を達成する');
-  const title = (st.title && st.title.trim()) ? st.title.trim()
-    : ((pur ? pur.label : 'ねこ') + 'ゲーム');
+  const success = (cons.length ? cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') + '、' : '')
+    + (pur ? pur.goal : '目的を達成する');
+  const title = (st.title && st.title.trim()) ? st.title.trim() : ((pur ? pur.label : 'ねこ') + 'ゲーム');
   const pr = st.profile || {};
-  const nm = (arr, ids) => (ids||[]).map(id => { const x = arr.find(y=>y.id===id); return x ? x.label : null; }).filter(Boolean);
+  const others = pr.other || {};
+  const nm = (arr, ids, oth) => {
+    const base = (ids||[]).map(id => { const x = arr.find(y=>y.id===id); return x ? x.label : null; }).filter(Boolean);
+    if(oth && oth.trim()) base.push(oth.trim());
+    return base;
+  };
+  const obstacles = nm(CT.CANDS.bad, pr.bad).slice(0,3);
+  if(obstacles.length===0) obstacles.push('掃除機');
   return {
-    title, action:act, purpose:pur, cons, dur, consText, success,
-    good: nm(CT.CANDS.good, pr.good), bad: nm(CT.CANDS.bad, pr.bad),
-    feat: nm(CT.CANDS.feat, pr.feat), target: nm(CT.CANDS.target, pr.target),
-    other: pr.other || '', persona: st.persona || ''
+    title, action:act, variantIdx:v, centerVerb, sub, subVerb: sub ? sub.verb : '',
+    purpose:pur, cons, dur, consText, success, obstacles,
+    packLabel: st.packLabel || '',
+    coatId: st.coat || 'shima',
+    good: nm(CT.CANDS.good, pr.good, others.good),
+    bad: nm(CT.CANDS.bad, pr.bad, others.bad),
+    feat: nm(CT.CANDS.feat, pr.feat, others.feat),
+    target: nm(CT.CANDS.target, pr.target, others.target),
+    persona: st.persona || ''
   };
 }
-
-/* ---------------- 案の1文（EMS型） ---------------- */
-function oneLine(P){
-  const verb = P.action ? P.action.verb : '（手段をえらぶ）';
-  const goal = P.purpose ? P.goal0() : '（目的をえらぶ）';
-  return 'ネコが' + verb + 'して、' + P.cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') + '、' + goal + 'ゲーム。';
-}
-/*_PURPOSES.goal は関数ではない。下のヘルパで安全に取る */
 function goalOf(P){ return P.purpose ? P.purpose.goal : ''; }
+function oneLine(P){
+  const verb = P.centerVerb || '（手段をえらぶ）';
+  const goal = goalOf(P) || '（目的をえらぶ）';
+  const cons = P.cons.length ? P.cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') + '、' : '';
+  return 'ネコが' + verb + 'して、' + cons + goal + 'ゲーム。';
+}
 
-/* ---------------- 1. 1枚企画書 ---------------- */
-function promptPlan(P, J){
+/* ---------------- 1. 1枚企画書（EMS注釈つき） ---------------- */
+function promptPlan(P, J, G){
   return [
 '【1枚企画書 — ' + P.title + '】',
 '',
 '■ EMS（Ends and Means Structure／手段目的構造）',
-'目的（E）: ' + goalOf(P),
-'手段（M）: ' + (P.action ? P.action.label + '（操作: ' + P.action.verb + '）' : '未記入'),
-'制約（S・構造に加える刺激）:',
+'【目的（E）】' + goalOf(P),
+'【手段（M）】中心: ' + (P.centerVerb || '未記入') + '（ネコの' + (P.action ? P.action.label : '未記入') + '）',
+(P.subVerb ? '　　　　　サブ: ' + P.subVerb + '（ネコの' + P.sub.label + '）' : ''),
+'【制約（S・構造に加える刺激）】',
 (P.consText || '・未記入（数値のない制約は使えません）'),
+(P.packLabel ? '（しばりの型: ' + P.packLabel + '）' : ''),
+'【出てくる障害（具体）】' + P.obstacles.join('、'),
 '',
 '■ EMS判定（点数でなく3色）',
 J ? (J.color + '（' + J.verdict + '）: ' + J.reason) : '未判定',
+'',
+'■ ゲーム性チェック',
+G.map(g=>g.name + ' ' + g.mark + ' — ' + g.comment).join('\n'),
 '',
 '■ この案はどこから来たか（グループの総意）',
 'ネコの得意: ' + (P.good.join('／') || '未記入'),
 'ネコの苦手: ' + (P.bad.join('／') || '未記入'),
 'ネコの特徴: ' + (P.feat.join('／') || '未記入'),
 '買う人: ' + (P.target.join('／') || '未記入'),
-'ペルソナの課題: ' + (P.persona || '未記入（◯◯したいのに□□でできない）'),
+CT.PERSONA_LABEL + ': ' + (P.persona || '未記入（例: ' + CT.PERSONA_EX + '）'),
 '',
 '■ 成功条件', P.success,
 '■ 1プレイ', P.dur + '秒',
@@ -85,11 +104,12 @@ function promptImage(P){
 'ゲームのイメージ画像を1枚描いてください。',
 '',
 '【猫の描き方（数値で固定・このとおりに描く）】',
-CT.catSpecShort(),
+CT.catSpecShort(P.coatId),
 '',
 '【シーン】',
 'タイトル: ' + P.title,
-'していること: ' + (P.action ? P.action.label + '（' + P.action.verb + '）' : '未記入'),
+'していること: ' + (P.centerVerb || '未記入') + (P.subVerb ? '（サブ: ' + P.subVerb + '）' : ''),
+'出てくる障害: ' + P.obstacles.join('、'),
 '今のピンチ: ' + (P.cons[0] ? P.cons[0].def.tpl.replace('◯◯', String(P.cons[0].num)) : '未記入'),
 'ゴール: ' + goalOf(P),
 '見た目の方向: ' + ((P.target[0] || 'かわいい') + '向け・コミカル'),
@@ -101,29 +121,27 @@ CT.catSpecShort(),
 /* ---------------- 3. 2Dアセットシート（A4・12マス） ---------------- */
 function promptAssets(P){
   const rows = [
-    '1 猫プレイヤー（立ち）', '2 猫プレイヤー（' + (P.action ? P.action.label : '行動') + '）',
-    '3 猫（しま）', '4 猫（まだら）', '5 猫（単色）',
-    '6 障害1: ' + (P.bad[0] || '水'), '7 障害2: ' + (P.bad[1] || '掃除機'),
-    '8 ゴール: ' + (P.purpose ? P.purpose.label : '猫缶'), '9 集める物（猫缶・魚・毛糸）',
-    '10 仕掛け（段ボール箱・二役）', '11 背景（部屋・夜）', '12 UI（タイマー・ゲージ）'
+    '1 猫プレイヤー（立ち）', '2 猫プレイヤー（' + (P.centerVerb || '中心アクション') + '）',
+    '3 猫（' + (CT.coatOf(P.coatId).label) + '・立ち）', '4 猫（' + (CT.coatOf(P.coatId).label) + '・走り）',
+    '5 障害1: ' + (P.obstacles[0] || '掃除機'), '6 障害2: ' + (P.obstacles[1] || 'カラス'),
+    '7 ゴール: ' + (P.purpose ? P.purpose.label : '猫缶'), '8 集める物（猫缶・魚・毛糸）',
+    '9 仕掛け（段ボール箱・二役）', '10 背景（部屋・夜）', '11 UI（タイマー・ゲージ）', '12 タイトルロゴ用の猫マーク'
   ];
   return [
 '【2Dアセットシート（A4・12マス）】ゲームに必要な素材を12個、1枚に並べてください。',
-'すべて四角と三角だけで描く。色は3色まで。写真・実在キャラ・ロゴは使わない。',
-CT.catSpecShort(),
+'すべて四角と三角だけで描く。1体は3色まで。写真・実在キャラ・ロゴは使わない。',
+'',
+CT.catSpecShort(P.coatId),
 '',
 rows.join('\n')
   ].join('\n');
 }
 
-/* ---------------- 4. WEBプロト生成プロトコル ---------------- */
-function webCore(P){
-  return CT.ENGINE.CORE_CODE
-    .split('drawPico').join('drawCat')
-    .split('ピコ太郎').join('ネコ');
+/* ---------------- 4. WEBプロト生成プロトコル（HTML1ファイル拘束入り） ---------------- */
+function webCore(){
+  return pk(CT.ENGINE.CORE_CODE).split('drawPico').join('drawCat');
 }
 function promptWeb(P, J){
-  const code1 = webCore(P);
   return [
 'HTML/CSS/JavaScriptを1ファイルにまとめて、' + P.dur + '秒で遊べるWebミニゲームを作ってください。',
 '',
@@ -143,21 +161,23 @@ CT.ENGINE.LOCK,
 '',
 '【仕様（変更禁止）】',
 '・タイトル: ' + P.title,
-'・プレイヤーがすること: ' + (P.action ? P.action.verb : '未記入'),
+'・EMS（目的・手段・制約を変えない）:',
+'　目的（E）: ' + goalOf(P),
+'　手段（M）: 中心=' + (P.centerVerb || '未記入') + (P.subVerb ? '／サブ=' + P.subVerb : ''),
+'　制約（S）: ' + (P.cons.length ? P.cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') : '未記入'),
+'・出てくる障害（具体）: ' + P.obstacles.join('、'),
 '・成功条件: ' + P.success,
-'・制約（必ずこの数値を使う。変えない）:',
-(P.consText || '・未記入'),
 '・画面: TITLE → PLAY → RESULT（RESULTからRETRYで再開）',
 '',
 '【参照コード1: 骨格】' + F + 'js',
-code1,
+webCore(),
 F,
 '',
 '【参照コード2: 音（Web Audioで合成・音源ファイルは読まない）】' + F + 'js',
-CT.ENGINE.AUDIO_CODE,
+pk(CT.ENGINE.AUDIO_CODE),
 F,
 '',
-'【参照コード3: 猫の描画（drawCat）】' + F + 'js',
+'【参照コード3: 猫の描画（drawCat・柄「' + CT.coatOf(P.coatId).label + '」）】' + F + 'js',
 CT.CAT_DRAW_SRC,
 F,
 '',
@@ -200,12 +220,13 @@ function promptUnity(P){
 '',
 '■ この案を Unity に移す',
 'タイトル: ' + P.title,
-'目的: ' + goalOf(P),
-'手段（プレイヤー機能）: ' + (P.action ? P.action.label + '（' + P.action.verb + '）' : '未記入'),
-'制約 → GameSettings への反映:',
+'【目的（E）】' + goalOf(P),
+'【手段（M）】中心: ' + (P.centerVerb || '未記入') + (P.subVerb ? '／サブ: ' + P.subVerb : ''),
+'【制約（S）→ GameSettings への反映】',
 (P.consText || '・未記入'),
 '・c_time → Game Time / c_count → Required Item Count / c_space → Move Speed & ステージ幅 /',
 ' c_phys → Enemy Speed・Hazard 配置数 / c_info → 音ゲージ（Hide Object と組み合わせ）',
+'【出てくる障害（具体）】' + P.obstacles.join('、') + '（見た目だけ差し替え。機能は Patrol/Chase を使い回す）',
 '',
 '■ 使うギミック（優先度A）',
 'Moving Platform / Switch / Push Box / Hazard Area / Patrol Enemy / Collectible / Goal / Timer / Hide Object',
@@ -217,14 +238,18 @@ function promptUnity(P){
   ].join('\n');
 }
 
-/* ---------------- 6. 提案書（オープンキャンパス来場者・保護者向け） ---------------- */
+/* ---------------- 6. 提案書（来場者・保護者向け・EMS注釈つき） ---------------- */
 function promptProposal(P){
   return [
 '【提案書（来場者・保護者向け・1枚）】',
 '',
-'課題: ' + (P.persona || '（ペルソナの日常課題を書く）'),
+CT.PERSONA_LABEL + ': ' + (P.persona || '（' + CT.PERSONA_EX + ' の型で書く）'),
 '→ この課題に答えるゲーム: ' + P.title,
-'ネコが' + (P.action ? P.action.verb : '（手段）') + 'して、' + (P.cons[0] ? P.cons[0].def.tpl.replace('◯◯', String(P.cons[0].num)) : '（制約）') + '、' + goalOf(P) + 'ゲーム。',
+'',
+'■ EMSで読む（今日学んだ構造）',
+'【目的（E）】' + goalOf(P),
+'【手段（M）】ネコが' + (P.centerVerb || '（手段）') + 'して' + (P.subVerb ? '、' + P.subVerb : ''),
+'【制約（S）】' + (P.cons.length ? P.cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') : '（制約）'),
 '',
 'なぜネコなのか: ' + (P.feat.join('／') || 'ネコの得意・苦手・特徴をルールに反映するため'),
 '遊ぶ人: ' + (P.target.join('／') || '未記入'),
@@ -233,11 +258,10 @@ function promptProposal(P){
   ].join('\n');
 }
 
-/* ---------------- 6種をまとめて組み立てる（検証でも使う） ---------------- */
-function buildAll(st, J){
+function buildAll(st, J, G){
   const P = planOf(st);
   return {
-    plan: promptPlan(P, J),
+    plan: promptPlan(P, J, G),
     image: promptImage(P),
     assets: promptAssets(P),
     web: promptWeb(P, J),
