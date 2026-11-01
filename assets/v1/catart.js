@@ -111,11 +111,74 @@ function drawCat(ctx, x, y, s, pose, sx, sy, dir, coat){
   ctx.restore();
 }
 
+/* ---------------- 横向き（側面）の猫 ----------------
+   正面より簡単で猫らしく見える。プラットフォーマー・ラン系はこちら。
+   これも四角と三角だけ。dir で向きを反転する。
+   ------------------------------------------------------------ */
+function drawCatSide(ctx, x, y, s, pose, sx, sy, dir, coat){
+  var p = (typeof pose==='string') ? (CAT_POSES[pose]||CAT_POSES.idle) : (pose||CAT_POSES.idle);
+  var c = (typeof coat==='string') ? coatOf(coat) : (coat||COATS[0]);
+  var C = {body:c.body, ink:c.ink, white:c.white, spot:c.spot||null};
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale((dir||1)*s, s);
+  ctx.scale(sx||1, sy||1);
+  ctx.rotate((p.lean||0)*Math.PI/180);
+  var stretch = (p.mouth>=1) ? 0.10 : 0;
+  /* 足4本（走りは開く） */
+  var sp = p.split||0;
+  ctx.fillStyle = C.body;
+  ctx.fillRect(-0.62, -0.20, 0.16, 0.20);
+  ctx.fillRect(-0.34, -0.20, 0.16, 0.20);
+  ctx.fillRect( 0.22, -0.20, 0.16, 0.20);
+  ctx.fillRect( 0.50, -0.20, 0.16, 0.20);
+  /* 胴（横長の四角・跳ぶと伸びる） */
+  ctx.fillRect(-0.72, -0.78 - stretch, 1.44, 0.58 + stretch);
+  /* しっぽ（後ろから上へ・四角3つの階段） */
+  var t = p.tail||0;
+  ctx.fillRect(-0.90, -0.92 - t*0.10, 0.14, 0.14);
+  ctx.fillRect(-1.02, -1.06 - t*0.22, 0.14, 0.14);
+  ctx.fillRect(-1.08, -1.20 - t*0.34, 0.14, 0.14);
+  /* 頭（前の上に四角・耳は三角2つ） */
+  var hx = 0.44, hy = -1.30 - stretch;
+  ctx.fillRect(hx, hy, 0.66, 0.62);
+  ctx.beginPath(); ctx.moveTo(hx+0.02, hy+0.02); ctx.lineTo(hx+0.22, hy+0.02); ctx.lineTo(hx+0.06, hy-0.18); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(hx+0.44, hy+0.02); ctx.lineTo(hx+0.64, hy+0.02); ctx.lineTo(hx+0.60, hy-0.18); ctx.closePath(); ctx.fill();
+  /* 柄（背中側に） */
+  if(c.mode==='shima'){
+    ctx.fillRect(-0.50, -0.78 - stretch, 0.07, 0.24);
+    ctx.fillRect(-0.24, -0.78 - stretch, 0.07, 0.28);
+    ctx.fillRect( 0.02, -0.78 - stretch, 0.07, 0.24);
+  } else if(c.mode==='madara'){
+    ctx.fillRect(-0.56, -0.74 - stretch, 0.12, 0.12);
+    ctx.fillRect(-0.16, -0.68 - stretch, 0.12, 0.12);
+  } else if(c.mode==='mike'){
+    ctx.fillStyle = C.spot;
+    ctx.fillRect(-0.56, -0.74 - stretch, 0.13, 0.12);
+    ctx.fillRect(-0.14, -0.70 - stretch, 0.13, 0.12);
+    ctx.fillStyle = C.ink;
+    ctx.fillRect( 0.10, -0.74 - stretch, 0.13, 0.12);
+  } else if(c.mode==='shamu'){
+    ctx.fillRect(hx+0.06, hy+0.30, 0.54, 0.10);
+  }
+  /* 顔（目は横線・鼻・口・ひげ） */
+  ctx.fillStyle = C.ink;
+  ctx.fillRect(hx+0.34, hy+0.22, 0.12, 0.045);
+  ctx.fillRect(hx+0.52, hy+0.34, 0.07, 0.05);
+  var m = p.mouth||0;
+  if(m > 0.5){ ctx.fillRect(hx+0.46, hy+0.44, 0.16, 0.09); }
+  else { ctx.fillRect(hx+0.44, hy+0.44, 0.12, 0.03); }
+  ctx.fillRect(hx+0.24, hy+0.30, 0.18, 0.02);
+  ctx.fillRect(hx+0.24, hy+0.38, 0.18, 0.02);
+  ctx.restore();
+}
+
 /* 出力に同梱するソース（この文字列そのものが検証済みのコード） */
 const CAT_DRAW_SRC = 'var CAT_POSES = ' + JSON.stringify(CAT_POSES) + ';\n'
   + 'var COATS = ' + JSON.stringify(COATS) + ';\n'
   + coatOf.toString() + '\n'
-  + drawCat.toString();
+  + drawCat.toString() + '\n'
+  + drawCatSide.toString();
 
 /* 画像AI向けの短い版（比率5行・柄の選択を反映） */
 function catSpecShort(coatId){
@@ -133,5 +196,6 @@ CT.CAT_POSES = CAT_POSES;
 CT.COATS = COATS;
 CT.coatOf = coatOf;
 CT.drawCat = drawCat;
+CT.drawCatSide = drawCatSide;
 CT.CAT_DRAW_SRC = CAT_DRAW_SRC;
 CT.catSpecShort = catSpecShort;

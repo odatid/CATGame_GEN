@@ -224,19 +224,19 @@ CT.CANDS = {
     {id:'good_amai',   label:'甘え上手（すり寄る・膝に乗る）'}
   ],
   bad: [
-    {id:'bad_water',   label:'水'},
-    {id:'bad_vacuum',  label:'掃除機'},
-    {id:'bad_dog',     label:'犬'},
-    {id:'bad_noise',   label:'大きな音'},
-    {id:'bad_car',     label:'車'},
-    {id:'bad_bath',    label:'お風呂'},
-    {id:'bad_fall',    label:'落下'},
-    {id:'bad_trapped', label:'閉じ込められる'},
-    {id:'bad_crow',    label:'カラス'},
-    {id:'bad_thunder', label:'雷'},
-    {id:'bad_citrus',  label:'柑橘の匂い'},
-    {id:'bad_cold',    label:'急な冷たい感触'},
-    {id:'bad_leek',    label:'ネギ'}
+    {id:'bad_water',   label:'水',               kind:'static'},
+    {id:'bad_vacuum',  label:'掃除機',           kind:'move'},
+    {id:'bad_dog',     label:'犬',               kind:'move'},
+    {id:'bad_noise',   label:'大きな音',         kind:'sound'},
+    {id:'bad_car',     label:'車',               kind:'move'},
+    {id:'bad_bath',    label:'お風呂',           kind:'static'},
+    {id:'bad_fall',    label:'落下',             kind:'static'},
+    {id:'bad_trapped', label:'閉じ込められる',   kind:'static'},
+    {id:'bad_crow',    label:'カラス',           kind:'move'},
+    {id:'bad_thunder', label:'雷',               kind:'sound'},
+    {id:'bad_citrus',  label:'柑橘の匂い',       kind:'static'},
+    {id:'bad_cold',    label:'急な冷たい感触',   kind:'static'},
+    {id:'bad_leek',    label:'ネギ',             kind:'static'}
   ],
   feat: [
     {id:'feat_box',    label:'段ボール好き'},
@@ -308,7 +308,7 @@ CT.JUDGE_WORDS = {
   green: {word:'ちょうどよい', note:'もう一回を押したくなる域です'},
   yellow:{word:'あまい',       note:'制約が弱く、すぐ飽きるかもしれません'},
   red:   {word:'むり',         note:'理不尽です。笑いではなく怒りになります'},
-  empty: {word:'未記入あり',   note:'わからないままで大丈夫。埋まっていない場所を下に示します'}
+  empty: {word:'まだ決まっていない', note:'わからないままで大丈夫。どの画面で決めるかを下に書きます'}
 };
 CT.CHECK_AXES = ['uni','twi','fun','emp'];
 CT.CHECK_NAMES = {uni:'ユニークさ', twi:'ひねり', fun:'おかしさ', emp:'共感'};
@@ -328,4 +328,66 @@ CT.PHASES = [
   {id:'rush',  at:'残り7秒',  name:'ラッシュ（2段目）', speed:'×1.28', note:'画面の縁を赤い帯に。BGMに1音足す'},
   {id:'last',  at:'残り3秒',  name:'最後（3段目）',     speed:'×1.42', note:'明滅。ここで誰でも声が出る'}
 ];
-CT.VERSION = {tag:'誰を操作する版 v0.4.0', date:'2026-11-01'};
+/* ---------------- 舞台（背景）と BGMの型（ゲーム内容から決定的に選ぶ） ---------------- */
+CT.STAGES = [
+  {id:'st_home_morn', label:'家の中（朝）',   sky:'#F7E7C6', items:'窓2つ・棚とテーブルとソファのシルエット・電気の光・床の木目（横線）'},
+  {id:'st_home_eve',  label:'家の中（夕方）', sky:'#E8B77D', items:'窓（夕日）・家具のシルエット・ランプの光・床の木目'},
+  {id:'st_home_night',label:'家の中（夜）',   sky:'#2E2A3E', items:'窓1つ（月）・ランプのあかり・家具のシルエット・床の木目'},
+  {id:'st_town_day',  label:'街の中（昼）',   sky:'#A8D8E8', items:'奥にビルのシルエット（四角の重なり）・電柱と電線・道路（帯）・看板（四角）'},
+  {id:'st_town_eve',  label:'街の中（夕方）', sky:'#D88A5A', items:'ビルのシルエット・電柱と電線・道路・窓のあかり（四角）'},
+  {id:'st_garden',    label:'庭',             sky:'#BFE0B0', items:'塀（上に細い通路）・植木鉢・洗濯物（線と四角）'},
+  {id:'st_bath',      label:'お風呂場・水回り', sky:'#C7E0E8', items:'タイル（縦線）・洗濯機・バケツ・床の水たまり'},
+  {id:'st_clinic',    label:'病院',           sky:'#E8EFE8', items:'待合席・受付カウンター・ポスター（四角）'}
+];
+CT.BGM_STYLES = [
+  {id:'bgm_bright',  label:'あかるい朝（標準）', spec:'明るいメジャーコード・跳ねるようなリズム。朝のホームドラマのテーマのような、歌える明るさ'},
+  {id:'bgm_relax',   label:'のんびり（癒し）',   spec:'ゆったりした3/4拍子・柔らかい音色（三角波中心）'},
+  {id:'bgm_playful', label:'おちゃめ（いたずら）', spec:'スタッカートで跳ねる・ユーモラス（2拍目にアクセント）'},
+  {id:'bgm_tense',   label:'こっそり（ひそひそ）', spec:'静かめ・シンプルなベースに時々高い音。緊張は作るが暗すぎない'},
+  {id:'bgm_hurry',   label:'あわてる（かけっこ）', spec:'テンポ速め・推進力のある8分ノリ'}
+];
+/* 目的グループごとに舞台とBGMを決める（例外は上書き） */
+CT.STAGE_MAP = {
+  pg_run:'st_town_day',   p_run_vac:'st_home_morn', p_run_rain:'st_town_eve',
+  pg_climb:'st_town_day', p_climb_fridge:'st_home_morn', p_climb_crow:'st_garden',
+  pg_jump:'st_garden',    p_jump_bird:'st_home_morn',
+  pg_hide:'st_home_night',
+  pg_collect:'st_home_morn', p_collect_friend:'st_town_day',
+  pg_ambush:'st_home_night', p_amb_fish:'st_home_morn',
+  pg_chaos:'st_home_morn',
+  pg_care:'st_home_eve',  p_care_morning:'st_home_morn',
+  pg_battle:'st_garden',  p_bat_vacuum:'st_home_morn',
+  pg_puzzle:'st_home_morn', p_pz_kitten:'st_home_night',
+  pg_balance:'st_garden', p_bal_carry:'st_home_morn',
+  pg_water:'st_bath',     p_wat_puddle:'st_town_day',
+  hg_find:'st_home_night', h_runaway:'st_town_eve',
+  hg_catch:'st_clinic',   hg_care:'st_home_morn', h_bath:'st_bath',
+  hg_shoot:'st_home_morn', hg_play:'st_home_morn',
+  hg_guard:'st_home_morn', hg_live:'st_home_morn', h_sleep:'st_home_night'
+};
+CT.BGM_MAP = {
+  pg_run:'bgm_hurry',  pg_climb:'bgm_bright',  pg_jump:'bgm_bright',
+  pg_hide:'bgm_tense', pg_collect:'bgm_bright', pg_ambush:'bgm_tense',
+  pg_chaos:'bgm_playful', pg_care:'bgm_relax', pg_battle:'bgm_hurry',
+  pg_puzzle:'bgm_bright', pg_balance:'bgm_bright', pg_water:'bgm_hurry',
+  hg_find:'bgm_tense', hg_catch:'bgm_hurry', hg_care:'bgm_relax',
+  hg_shoot:'bgm_bright', hg_play:'bgm_playful', hg_guard:'bgm_tense', hg_live:'bgm_relax'
+};
+function stageOf(purposeId){
+  if(!purposeId) return CT.STAGES[0];
+  if(CT.STAGE_MAP[purposeId]) return CT.STAGES.find(s=>s.id===CT.STAGE_MAP[purposeId]) || CT.STAGES[0];
+  const grp = CT.PURPOSE_GROUPS.concat(CT.PURPOSE_GROUPS_HUMAN||[]).find(g=>g.items.some(i=>i.id===purposeId));
+  if(grp && CT.STAGE_MAP[grp.id]) return CT.STAGES.find(s=>s.id===CT.STAGE_MAP[grp.id]) || CT.STAGES[0];
+  return CT.STAGES[0];
+}
+function bgmOf(purposeId){
+  if(!purposeId) return CT.BGM_STYLES[0];
+  if(CT.BGM_MAP[purposeId]) return CT.BGM_STYLES.find(s=>s.id===CT.BGM_MAP[purposeId]) || CT.BGM_STYLES[0];
+  const grp = CT.PURPOSE_GROUPS.concat(CT.PURPOSE_GROUPS_HUMAN||[]).find(g=>g.items.some(i=>i.id===purposeId));
+  if(grp && CT.BGM_MAP[grp.id]) return CT.BGM_STYLES.find(s=>s.id===CT.BGM_MAP[grp.id]) || CT.BGM_STYLES[0];
+  return CT.BGM_STYLES[0];
+}
+CT.stageOf = stageOf;
+CT.bgmOf = bgmOf;
+
+CT.VERSION = {tag:'あかるい音と背景版 v0.5.0', date:'2026-11-01'};

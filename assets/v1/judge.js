@@ -104,9 +104,9 @@ function findCons(id){
 function judge(state){
   var act = findAction(state && state.action);
   if(!act){
-    return {color:'empty', verdict:'未記入あり',
-            reason:'手段（てだて）がまだ選ばれていません',
-            fixes:['03 てだて（手段）で猫のアクションを1つ選ぶ']};
+    return {color:'empty', verdict:'まだ決まっていない',
+            reason:'「03 てだて」= このゲームで中心となるアクションが、まだ選ばれていません',
+            fixes:['03 てだて の画面で選ぶ（「02 ねらい」の次の画面です）']};
   }
   var raw = (state && state.cons) || [];
   var cons = [], missing = [];
@@ -138,9 +138,9 @@ function judge(state){
   }
   /* 3) 数値のない制約は未記入（緑にしない） */
   if(missing.length>0){
-    return {color:'empty', verdict:'未記入あり',
-            reason:'数値のない制約は未記入として扱います（' + missing.length + '件）',
-            fixes:['04 しばりで「' + missing[0].label + '」に数値を入れる']};
+    return {color:'empty', verdict:'まだ決まっていない',
+            reason:'「04 しばり」で選んだ制約に数値が入っていません（' + missing.length + '件）。数値が入ると点検できます',
+            fixes:['04 しばり の画面で「' + missing[0].label + '」に数値を入れる']};
   }
   /* 4) 制約ゼロはあまい */
   if(cons.length===0){

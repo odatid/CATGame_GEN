@@ -102,6 +102,31 @@ function nav(prev, next, nextLabel){
 function catCanvas(pose, coat){
   return '<canvas class="preview" width="140" height="160" data-catpose="'+pose+'" data-coat="'+(coat||state.coat)+'"></canvas>';
 }
+/* しばりパックの文面（障害の種類で自然な日本語に変わる） */
+function badInfo(){
+  const id0 = state.profile.bad[0];
+  return CT.CANDS.bad.find(x=>x.id===id0) || {label:'掃除機', kind:'move'};
+}
+function obstPhrase(b){
+  if(b.kind==='sound')  return b.label + 'が鳴ったらミスになる';
+  if(b.kind==='static') return b.label + 'に触れるとミスになる';
+  return b.label + 'が動き回っていて、当たるとミスになる';
+}
+function packText(p){
+  const who = (state.subject==='sub_human') ? 'ネコ' : '飼い主';
+  const b = badInfo();
+  switch(p.id){
+    case 'pk_time':     return '決めた時間までに達成できなくする（30秒）';
+    case 'pk_obst':     return obstPhrase(b);
+    case 'pk_narrow':   return '動ける範囲を横240pxに狭める（自由に動けない）';
+    case 'pk_sleep':    return who + 'を起こさずに進む（音ゲージ60%を維持）';
+    case 'pk_count':    return '中心アクションは5回まで（失敗したやり直しも含む）';
+    case 'pk_timeob':   return '45秒以内に、' + obstPhrase(b);
+    case 'pk_narcount': return '動けるのは横160pxだけ。中心アクションは3回まで';
+    case 'pk_hard':     return '20秒以内に、' + who + 'を起こさずに達成する（音ゲージ40%）';
+  }
+  return p.text;
+}
 function drawPreviews(){
   document.querySelectorAll('canvas[data-catpose]').forEach(cv=>{
     const ctx = cv.getContext('2d');
@@ -194,7 +219,7 @@ R.cons = () => {
   const ob = (state.profile.bad.length ? (CT.CANDS.bad.find(b=>b.id===state.profile.bad[0])||{}).label : '') || '掃除機';
   const packs = page.map(p=>{
     const on = JSON.stringify(state.cons.map(c=>c.id+c.num)) === JSON.stringify(p.items.map(i=>i.id+i.num));
-    return '<button type="button" class="packbtn'+(on?' on':'')+'" data-pack="'+p.id+'"><b>'+esc(p.label)+'</b><span>'+esc(p.text.split('{obstacle}').join(ob))+'</span></button>';
+    return '<button type="button" class="packbtn'+(on?' on':'')+'" data-pack="'+p.id+'"><b>'+esc(p.label)+'</b><span>'+esc(packText(p))+'</span></button>';
   }).join('');
   const rows = state.cons.map((c,i)=>{
     const def = CT.CONSTRAINTS.find(d=>d.id===c.id);
@@ -235,8 +260,9 @@ R.check = () => {
 '<section class="card"><div class="eyebrow">STEP 05 / 点検</div>',
 '<h2 class="step">ゲーム性チェック</h2>',
 G.map(g=>'<div class="checkrow"><span class="ax">'+esc(g.name)+'</span><span class="mark m'+g.mark+'">'+g.mark+'</span><span class="cm">'+esc(g.comment)+'</span></div>').join(''),
-'<div class="lbl">EMS判定（点数でなく3色）</div>',
+'<div class="lbl">EMS判定（3色・点数なし）</div>',
 '<div class="verdict '+J.color+'">'+esc(W.word)+'（'+J.color+'）</div>',
+'<p class="lead" style="margin:4px 0 0">'+esc(W.note)+'</p>',
 '<p class="reason">'+esc(J.reason)+'</p>',
 (J.fixes.length ? '<ul class="fixes">'+J.fixes.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul>' : ''),
 '<div class="lbl">いまの案（EMS）</div>',
@@ -260,6 +286,8 @@ R.plan = () => {
 '<div class="emsrow"><span class="emstag">手段（M）</span>中心: ' + esc(P.centerVerb || '未記入') + (P.subVerb ? '　／　サブ: ' + esc(P.subVerb) : '') + '</div>',
 '<div class="emsrow"><span class="emstag">制約（S）</span>' + esc(P.cons.length ? P.cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') + (P.packLabel ? '（' + P.packLabel + '）' : '') : '未記入') + '</div>',
 '<div class="emsrow"><span class="emstag">障害（具体）</span>' + esc(P.obstacles.join('、')) + '</div>',
+'<div class="emsrow"><span class="emstag">舞台（背景）</span>' + esc(CT.stageOf(P.purpose ? P.purpose.id : '').label) + '</div>',
+'<div class="emsrow"><span class="emstag">BGM</span>' + esc(CT.bgmOf(P.purpose ? P.purpose.id : '').label) + '（明るい・歌える方向で作り起こす）</div>',
 '<div class="emsrow"><span class="emstag">成功条件</span>' + esc(P.success) + '</div>',
 '</div>',
 '<div class="lbl">タイトル（空なら自動で入ります）</div>',
@@ -336,9 +364,9 @@ document.addEventListener('click', e=>{
   if(t.dataset.variant !== undefined && t.dataset.variant !== ''){ state.variant = +t.dataset.variant; render(); return; }
   if(t.dataset.sub !== undefined){ state.subAction = t.dataset.sub; if(t.dataset.sub==='') { state.subAction=''; } render(); return; }
   if(t.dataset.pack){ const p = CT.PACKS.find(x=>x.id===t.dataset.pack); if(p){ state.cons = p.items.map(i=>({id:i.id, num:i.num})); state.packLabel = p.label; state.consMode='pack'; } render(); return; }
-  if(t.dataset.packpage !== undefined && t.dataset.packpage !== ''){ state.packPage = (state.packPage+1) % Math.ceil(CT.PACKS.length/CT.PACKS_PAGE); render(); return; }
-  if(t.dataset.manual !== undefined && t.dataset.manual !== ''){ state.consMode = 'manual'; render(); return; }
-  if(t.dataset.consclear !== undefined && t.dataset.consclear !== ''){ state.cons = []; state.packLabel=''; render(); return; }
+  if('packpage' in t.dataset){ state.packPage = (state.packPage+1) % Math.ceil(CT.PACKS.length/CT.PACKS_PAGE); render(); return; }
+  if('manual' in t.dataset){ state.consMode = 'manual'; render(); return; }
+  if('consclear' in t.dataset){ state.cons = []; state.packLabel=''; render(); return; }
   if(t.dataset.consadd){ if(state.cons.length<3){ state.cons.push({id:t.dataset.consadd, num:(CT.CONSTRAINTS.find(c=>c.id===t.dataset.consadd)||{}).num}); state.packLabel=''; } render(); return; }
   if(t.dataset.consdel !== undefined && t.dataset.consdel !== ''){ state.cons.splice(+t.dataset.consdel, 1); render(); return; }
   if(t.dataset.copy){ const J=CT.judge(state), G=CT.gameCheck(state); const outs = CT.buildAll(state, J, G); copyText(outs[t.dataset.copy], t); return; }

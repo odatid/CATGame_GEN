@@ -114,6 +114,7 @@ CT.PERSONA_LABEL + ': ' + (P.persona || '未記入（例: ' + CT.PERSONA_EX + '�
 
 /* ---------------- 2. ゲームイメージ画像 ---------------- */
 function promptImage(P){
+  const stage = CT.stageOf(P.purpose ? P.purpose.id : '');
   return [
 'ゲームのイメージ画像を1枚描いてください。',
 '',
@@ -121,7 +122,7 @@ function promptImage(P){
 CT.catSpecShort(P.coatId),
 '',
 '【シーン】',
-'タイトル: ' + P.title,
+'舞台: ' + stage.label + '（' + stage.items + '）',
 'していること: ' + (P.centerVerb || '未記入') + (P.subVerb ? '（サブ: ' + P.subVerb + '）' : ''),
 '出てくる障害: ' + P.obstacles.join('、'),
 '今のピンチ: ' + (P.cons[0] ? P.cons[0].def.tpl.replace('◯◯', String(P.cons[0].num)) : '未記入'),
@@ -134,12 +135,13 @@ CT.catSpecShort(P.coatId),
 
 /* ---------------- 3. 2Dアセットシート（A4・12マス） ---------------- */
 function promptAssets(P){
+  const stage = CT.stageOf(P.purpose ? P.purpose.id : '');
   const rows = [
     '1 猫プレイヤー（立ち）', '2 猫プレイヤー（' + (P.centerVerb || '中心アクション') + '）',
     '3 猫（' + (CT.coatOf(P.coatId).label) + '・立ち）', '4 猫（' + (CT.coatOf(P.coatId).label) + '・走り）',
     '5 障害1: ' + (P.obstacles[0] || '掃除機'), '6 障害2: ' + (P.obstacles[1] || 'カラス'),
     '7 ゴール: ' + (P.purpose ? P.purpose.label : '猫缶'), '8 集める物（猫缶・魚・毛糸）',
-    '9 仕掛け（段ボール箱・二役）', '10 背景（部屋・夜）', '11 UI（タイマー・ゲージ）', '12 タイトルロゴ用の猫マーク'
+    '9 仕掛け（段ボール箱・二役）', '10 背景（' + stage.label + '）', '11 UI（タイマー・ゲージ）', '12 タイトルロゴ用の猫マーク'
   ];
   return [
 '【2Dアセットシート（A4・12マス）】ゲームに必要な素材を12個、1枚に並べてください。',
@@ -155,7 +157,47 @@ rows.join('\n')
 function webCore(){
   return pk(CT.ENGINE.CORE_CODE).split('drawPico').join('drawCat');
 }
+/* ジュースの誇張レベル（FB: もっと誇張してほしい） */
+const JUICE_MORE = [
+'【ジュースの誇張レベル（必須・この倍率をそのまま使う）】',
+'・スクワッシュ&ストレッチを強める: ジャンプ時 sx0.75/sy1.30、着地時 sx1.45/sy0.62。戻すのは0.09秒（イージング付き）。',
+'・粒（パーティクル）は24個までではなく60個まで。着地とゴールで2重に出す（色は2色）。',
+'・数字ポップは1.6倍の大きさで、回転しながら浮かせる（±12度）。',
+'・画面シェイクは最大16px・0.25秒（被弾とゴール時のみ。常用しない）。',
+'・ヒットストップ: 被弾の瞬間0.05秒だけ全体を止める。',
+'・ゴール: 画面全体のフラッシュ（白0.1秒）+ 粒60 + ニャー（音）+ スコア表示のバウンド。',
+'・待機中も完全には止めない（尻尾の揺れとまばたき。ネコの命を見せる）。'
+].join('\n');
+/* 効果音（FB: SEは鳴らしてほしい・ニャーも入れる） */
+const SFX_SPEC = [
+'【効果音（必須・全部Web Audioで合成。音源ファイルは読まない）】',
+'・ジャンプ: 上昇スイープ（200Hz→600Hz・矩形波・0.12秒）',
+'・着地: 低いパルス（80Hz・0.08秒・ゲインを急に下げる）',
+'・取得: 2音のアルペジオ（660Hz→990Hz・三角波）',
+'・ミス: 下降スイープ（400Hz→120Hz・のこぎり波・0.2秒）',
+'・ゴール: ファンファーレ4音（C-E-G-C・矩形波）',
+'・ニャー（甘え・成功時）: サイン波を600Hz→900Hz→500Hzと滑らかに曲げる（0.35秒・ビブラート付き）。表記は「にゃー」',
+'・ニャー（不満・ミス時）: 低め（300Hz前後）で短い（0.2秒）・途中で音程を下げる',
+'・SEはイベントと1対1にする。無音のまま進まないこと（BGMもSEも参照コード2の作り方を使う）。'
+].join('\n');
+/* いらすとや（任意・規約の範囲を明記） */
+const IRASUTOYA = [
+'【任意: いらすとやの素材を使う場合】',
+'・ネコや小物の絵を、いらすとや（https://www.irasutoya.com/）に合わせたテイストにする場合は、',
+'  学生が自分で同サイトからPNGをダウンロードして、このHTMLと同じフォルダに置くこと。',
+'・置いた画像は <img> か drawImage で読めてよい（file:// で動く範囲内）。',
+'・同サイトの規約: 商用利用・加工は可、クレジット表記は不要。ただし**再配布・自作の絵のように見せること・画像URLへの直接リンクは不可**。',
+'・GitHub等に公開するとき、いらすとやの画像ファイルをリポジトリに含めない（上の「再配布不可」に当たるため）。',
+'・画像を使わない場合も、このままの図形ネコで必ず遊べること（画像が無くても壊れない）。'
+].join('\n');
 function promptWeb(P, J){
+  const stage = CT.stageOf(P.purpose ? P.purpose.id : '');
+  const bgm = CT.bgmOf(P.purpose ? P.purpose.id : '');
+  const sideView = ['pg_run','pg_climb','pg_balance','pg_battle','hg_find','hg_catch'].some(g=>
+    (P.purpose && (P.purpose.id===g || (CT['PURPOSE_GROUPS_'+g] && false))));
+  const useSide = ['pg_run','pg_climb','pg_balance','pg_battle','pg_chaos','hg_find','hg_catch','hg_guard']
+    .some(g=>{ const grp = CT.PURPOSE_GROUPS.concat(CT.PURPOSE_GROUPS_HUMAN).find(x=>x.id===g);
+               return P.purpose && grp && grp.items.some(i=>i.id===P.purpose.id); });
   return [
 'HTML/CSS/JavaScriptを1ファイルにまとめて、' + P.dur + '秒で遊べるWebミニゲームを作ってください。',
 '',
@@ -191,9 +233,16 @@ F,
 pk(CT.ENGINE.AUDIO_CODE),
 F,
 '',
-'【参照コード3: 猫の描画（drawCat・柄「' + CT.coatOf(P.coatId).label + '」）】' + F + 'js',
+'【参照コード3: 猫の描画（drawCat=正面・drawCatSide=横向き・柄「' + CT.coatOf(P.coatId).label + '」）】' + F + 'js',
 CT.CAT_DRAW_SRC,
 F,
+'',
+'【猫の見せ方】',
+'・この案は' + (useSide ? '横向き（drawCatSide）を使う。dir で進行方向に反転する' : '正面（drawCat）を使ってよい。横向き（drawCatSide）でもよい') + '。',
+'・柄は「' + CT.coatOf(P.coatId).label + '」で固定。目は細めた横線のまま、変えるのは口だけ（猫らしさの核）。',
+'',
+'【BGMの方向（この案ではこの1本を作り起こす・既存曲の旋律を複製しない）】',
+'『' + bgm.label + '』: ' + bgm.spec + '。作り方は参照コード2のとおり（Web Audioで合成）。',
 '',
 pk(CT.ENGINE.INPUT_SPEC),
 '',
@@ -206,6 +255,18 @@ pk(CT.ENGINE.PERF_RULE),
 pk(CT.ENGINE.WIGGLE_SPEC),
 '',
 pk(CT.ENGINE.NES_BGM_WEB),
+'',
+JUICE_MORE,
+'',
+SFX_SPEC,
+'',
+'【背景（決定的に描く・この舞台で作る）】',
+'舞台: ' + stage.label + '（空・壁の色 ' + stage.sky + '）',
+'描くもの: ' + stage.items,
+'・背景はすべて四角・三角・線で描く（先に背景を描いてから、その手前にゲームを置く）。',
+'・「3色まで」のルールはネコ本体に適用。背景は地味な同系色で、ネコが映えるようにする。',
+'',
+IRASUTOYA,
 '',
 '【展開（このとおりに作る）】',
 CT.PHASES.map(p=>'・' + p.at + '｜' + p.name + '｜速さ ' + p.speed + '｜' + p.note).join('\n'),
