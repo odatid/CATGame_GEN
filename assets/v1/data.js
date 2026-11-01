@@ -390,4 +390,4 @@ function bgmOf(purposeId){
 CT.stageOf = stageOf;
 CT.bgmOf = bgmOf;
 
-CT.VERSION = {tag:'あかるい音と背景版 v0.5.0', date:'2026-11-01'};
+CT.VERSION = {tag:'カメラ版 v0.7.0', date:'2026-11-02'};

@@ -9,6 +9,20 @@ window.CT = window.CT || {};
 'use strict';
 const F = '```';
 
+/* ---------------- カメラとスクロールの仕様（MAPが画面より大きいときは必須） ---------------- */
+const CAMERA_SPEC = [
+'【カメラとスクロール（MAPが画面(960×540)より大きいときは必須）】',
+'・カメラ変数は camX / camY の2つだけ。update() の最後（updateGame の直後）で更新する。',
+'・基本の追従: camX を「プレイヤーが画面の中央より少し先を見る」位置へ寄せる。',
+'　camX += ((player.x + (player.vx>=0 ? 120 : -120)) - (camX + W/2)) * Math.min(1, dt*6);',
+'　camY も同様に、プレイヤーが上へ登るなら少し先を見る（+60px上）。lerp係数は dt*6（遅すぎると酔う・速すぎると落ち着かない）。',
+'・クランプ（必須）: camX は 0〜MAP_W-W、camY は 0〜MAP_H-H に必ず収める。端で 世界が はみ出して見えるのは不合格。',
+'・描画への適用（1か所だけ）: renderPlayScreen() の冒頭、揺れの translate の前に ctx.translate(-camX, -camY) を足す。',
+'　背景も床も敵も全部世界座標のまま描いてよい（カメラが全部運ぶ）。HUD（SCORE/TIME/ライフ）はカメラの外＝translate の後に描く（動かない）。',
+'・TITLE と RESULT ではカメラを使わない（camX=camY=0 に戻す。固定座標で描く。タイトルが真っ黒になる事故の2つ目の原因）。',
+'・数字ポップ・粒も世界座標でよい（カメラと一緒に動く。HUDだけ固定）。'
+].join('\n');
+
 /* PK時代の語を猫に置き換える（組み立て時に決定的に） */
 function pk(t){
   return String(t)
@@ -58,6 +72,7 @@ function planOf(st){
   const success = (cons.length ? cons.map(c=>c.disp).join('、') + '、' : '')
     + (pur ? pur.goal : '目的を達成する');
   return {
+    patternId: st.pattern || '',
     subject: (st.subject==='sub_human') ? CT.SUBJECTS[1] : CT.SUBJECTS[0],
     title, action:act, variantIdx:v, centerVerb, sub, subVerb: sub ? sub.verb : '',
     purpose:pur, cons, dur, consText, success, obstacles,
@@ -154,8 +169,17 @@ rows.join('\n')
 }
 
 /* ---------------- 4. WEBプロト生成プロトコル（HTML1ファイル拘束入り） ---------------- */
-function webCore(){
-  return pk(CT.ENGINE.CORE_CODE).split('drawPico').join('drawCat');
+function webCore(P){
+  var t = pk(CT.ENGINE.CORE_CODE).split('drawPico').join('drawCat');
+  if(P && P.dur && P.dur !== 30){
+    t = t.split('duration: 30,').join('duration: ' + P.dur + ',');
+    t = t.split('30秒で確定（30秒か、長くても40秒。60秒にしない）').join('【仕様】の秒数に合わせてある（勝手に戻さない）');
+  }
+  if(P && P.coatId){
+    t = t.split("drawCat(ctx, player.x + swayX(), player.y, 34, pose, player.sx, player.sy, 1)")
+         .join("drawCat(ctx, player.x + swayX(), player.y, 34, pose, player.sx, player.sy, 1, '" + P.coatId + "')");
+  }
+  return t;
 }
 /* ジュースの誇張レベル（FB: もっと誇張してほしい） */
 const JUICE_MORE = [
@@ -191,13 +215,17 @@ const IRASUTOYA = [
 '・画像を使わない場合も、このままの図形ネコで必ず遊べること（画像が無くても壊れない）。'
 ].join('\n');
 function promptWeb(P, J){
+  const pat = (P.patternId && CT.PATTERNS && CT.PATTERNS[P.patternId]) ? CT.PATTERNS[P.patternId] : null;
+  const patBlock = pat ? ['【システム詳細（作り方の型: ' + pat.label + '）】', pat.detail(P), ''] : [];
   const stage = CT.stageOf(P.purpose ? P.purpose.id : '');
   const bgm = CT.bgmOf(P.purpose ? P.purpose.id : '');
   const sideView = ['pg_run','pg_climb','pg_balance','pg_battle','hg_find','hg_catch'].some(g=>
     (P.purpose && (P.purpose.id===g || (CT['PURPOSE_GROUPS_'+g] && false))));
+  const sideActs = ['a_climb','a_squeeze','a_knock','a_night'];
   const useSide = ['pg_run','pg_climb','pg_balance','pg_battle','pg_chaos','hg_find','hg_catch','hg_guard']
     .some(g=>{ const grp = CT.PURPOSE_GROUPS.concat(CT.PURPOSE_GROUPS_HUMAN).find(x=>x.id===g);
-               return P.purpose && grp && grp.items.some(i=>i.id===P.purpose.id); });
+               return P.purpose && grp && grp.items.some(i=>i.id===P.purpose.id); })
+    || (P.action && sideActs.indexOf(P.action.id)>=0);
   return [
 'HTML/CSS/JavaScriptを1ファイルにまとめて、' + P.dur + '秒で遊べるWebミニゲームを作ってください。',
 '',
@@ -225,8 +253,11 @@ CT.ENGINE.LOCK,
 '・成功条件: ' + P.success,
 '・画面: TITLE → PLAY → RESULT（RESULTからRETRYで再開）',
 '',
+...patBlock,
+CAMERA_SPEC,
+'',
 '【参照コード1: 骨格】' + F + 'js',
-webCore(),
+webCore(P),
 F,
 '',
 '【参照コード2: 音（Web Audioで合成・音源ファイルは読まない）】' + F + 'js',
@@ -264,6 +295,9 @@ SFX_SPEC,
 '舞台: ' + stage.label + '（空・壁の色 ' + stage.sky + '）',
 '描くもの: ' + stage.items,
 '・背景はすべて四角・三角・線で描く（先に背景を描いてから、その手前にゲームを置く）。',
+'・【必須】drawBackground と drawFloor を、この舞台の絵に置き換えること（「タイトル画面が真っ黒になる」最大の原因は、'
+ + 'この置き換えを怠って既定の暗い背景のままにすること。他の関数は書き換えない）。',
+'・【必須】TITLE と RESULT 画面にも、ネコを1匹描くこと（render() が drawBackground のあとに描けばよい）。「タイトルだけ猫がいない」画面は不合格。',
 '・「3色まで」のルールはネコ本体に適用。背景は地味な同系色で、ネコが映えるようにする。',
 '',
 IRASUTOYA,
