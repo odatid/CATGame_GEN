@@ -21,19 +21,17 @@ function pk(t){
 /* ---------------- 状態→案（plan） ---------------- */
 function planOf(st){
   st = st || {};
-  const act = CT.ACTIONS.find(a=>a.id===st.action) || null;
+  const ALLACT = CT.ACTIONS.concat(CT.HUMAN_ACTIONS || []);
+  const act = ALLACT.find(a=>a.id===st.action) || null;
   const v = (typeof st.variant==='number' && act && act.variants[st.variant]) ? st.variant : 0;
   const centerVerb = act ? act.variants[v] : '';
   const sub = CT.ACTIONS.find(a=>a.id===st.subAction) || null;
-  let pur = CT.PURPOSES.find(p=>p.id===st.purpose) || null;
+  let pur = (CT.PURPOSES.concat(CT.PURPOSES_HUMAN || [])).find(p=>p.id===st.purpose) || null;
   if(st.purposeOther && st.purposeOther.trim()){ pur = pur || {id:'p_custom', label:'その他', goal:st.purposeOther.trim(), rates:{uni:1,twi:0,fun:1,emp:1}}; }
   const cons = (st.cons||[]).map(c=>({ def: CT.CONSTRAINTS.find(d=>d.id===c.id), num: parseFloat(c.num) }))
     .filter(c=>c.def && isFinite(c.num));
   const tc = cons.find(c=>c.def.id==='c_time');
   const dur = tc ? tc.num : 30;
-  const consText = cons.map(c=>'・'+c.def.tpl.replace('◯◯', String(c.num))).join('\n');
-  const success = (cons.length ? cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') + '、' : '')
-    + (pur ? pur.goal : '目的を達成する');
   const title = (st.title && st.title.trim()) ? st.title.trim() : ((pur ? pur.label : 'ねこ') + 'ゲーム');
   const pr = st.profile || {};
   const others = pr.other || {};
@@ -44,7 +42,23 @@ function planOf(st){
   };
   const obstacles = nm(CT.CANDS.bad, pr.bad).slice(0,3);
   if(obstacles.length===0) obstacles.push('掃除機');
+  /* 制約の文面を自然な日本語に（障害の具体名・起こされる相手を埋める） */
+  cons.forEach(c=>{
+    if(c.def.id==='c_phys'){
+      const names = obstacles.slice(0, c.num);
+      c.disp = names.join('・') + (c.num > names.length ? 'など' : '') + 'を避けながら';
+    } else if(c.def.id==='c_info'){
+      const tgt = (st.subject==='sub_human') ? 'ネコ' : '飼い主';
+      c.disp = tgt + 'を起こさずに（音ゲージ' + c.num + '%を維持）';
+    } else {
+      c.disp = c.def.tpl.replace('◯◯', String(c.num));
+    }
+  });
+  const consText = cons.map(c=>'・'+c.disp).join('\n');
+  const success = (cons.length ? cons.map(c=>c.disp).join('、') + '、' : '')
+    + (pur ? pur.goal : '目的を達成する');
   return {
+    subject: (st.subject==='sub_human') ? CT.SUBJECTS[1] : CT.SUBJECTS[0],
     title, action:act, variantIdx:v, centerVerb, sub, subVerb: sub ? sub.verb : '',
     purpose:pur, cons, dur, consText, success, obstacles,
     packLabel: st.packLabel || '',
@@ -60,8 +74,8 @@ function goalOf(P){ return P.purpose ? P.purpose.goal : ''; }
 function oneLine(P){
   const verb = P.centerVerb || '（手段をえらぶ）';
   const goal = goalOf(P) || '（目的をえらぶ）';
-  const cons = P.cons.length ? P.cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') + '、' : '';
-  return 'ネコが' + verb + 'して、' + cons + goal + 'ゲーム。';
+  const cons = P.cons.length ? P.cons.map(c=>c.disp).join('、') + '、' : '';
+  return (P.subject ? P.subject.word : 'ネコが') + verb + 'して、' + cons + goal + 'ゲーム。';
 }
 
 /* ---------------- 1. 1枚企画書（EMS注釈つき） ---------------- */
@@ -164,7 +178,7 @@ CT.ENGINE.LOCK,
 '・EMS（目的・手段・制約を変えない）:',
 '　目的（E）: ' + goalOf(P),
 '　手段（M）: 中心=' + (P.centerVerb || '未記入') + (P.subVerb ? '／サブ=' + P.subVerb : ''),
-'　制約（S）: ' + (P.cons.length ? P.cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') : '未記入'),
+'　制約（S）: ' + (P.cons.length ? P.cons.map(c=>c.disp).join('、') : '未記入'),
 '・出てくる障害（具体）: ' + P.obstacles.join('、'),
 '・成功条件: ' + P.success,
 '・画面: TITLE → PLAY → RESULT（RESULTからRETRYで再開）',
@@ -248,8 +262,8 @@ CT.PERSONA_LABEL + ': ' + (P.persona || '（' + CT.PERSONA_EX + ' の型で書�
 '',
 '■ EMSで読む（今日学んだ構造）',
 '【目的（E）】' + goalOf(P),
-'【手段（M）】ネコが' + (P.centerVerb || '（手段）') + 'して' + (P.subVerb ? '、' + P.subVerb : ''),
-'【制約（S）】' + (P.cons.length ? P.cons.map(c=>c.def.tpl.replace('◯◯', String(c.num))).join('、') : '（制約）'),
+'【手段（M）】' + (P.subject ? P.subject.word : 'ネコが') + (P.centerVerb || '（手段）') + 'して' + (P.subVerb ? '、' + P.subVerb : ''),
+'【制約（S）】' + (P.cons.length ? P.cons.map(c=>c.disp).join('、') : '（制約）'),
 '',
 'なぜネコなのか: ' + (P.feat.join('／') || 'ネコの得意・苦手・特徴をルールに反映するため'),
 '遊ぶ人: ' + (P.target.join('／') || '未記入'),

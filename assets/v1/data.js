@@ -131,6 +131,80 @@ CT.PURPOSE_GROUPS = [
 ];
 CT.PURPOSES = CT.PURPOSE_GROUPS.reduce(function(a,g){ return a.concat(g.items); }, []);
 
+/* ---------------- 誰を操作するか（実観察: 約2割のグループは「人がネコに何かする」案を出す） ----------------
+   sub_cat  = ネコを操作する（従来どおり）
+   sub_human= 人（飼い主）が操作キャラで、ネコに何かする
+   EMSの背骨（目的・手段・制約）は同じ。操作の主体が変わるだけ。
+   ------------------------------------------------------------ */
+CT.SUBJECTS = [
+  {id:'sub_cat',   label:'ネコを操作する',                 word:'ネコが'},
+  {id:'sub_human', label:'人が操作して、ネコに何かする',   word:'飼い主が'}
+];
+
+/* ---------------- 人操作の目的（7カテゴリ18種） ---------------- */
+CT.PURPOSE_GROUPS_HUMAN = [
+  {id:'hg_find', label:'探す・見つける', items:[
+    {id:'h_runaway', label:'脱走したネコを探す',               goal:'脱走したネコを見つけて連れ帰る', rates:{uni:1,twi:2,fun:1,emp:1}},
+    {id:'h_hidden',  label:'隠れているネコを見つける',         goal:'隠れたネコを見つける',           rates:{uni:1,twi:1,fun:1,emp:1}},
+    {id:'h_spot',    label:'家の中のネコの隠れ家を全部見つける', goal:'隠れ家をぜんぶ見つける',       rates:{uni:1,twi:1,fun:2,emp:0}}
+  ]},
+  {id:'hg_catch', label:'捕まえる・連れて行く', items:[
+    {id:'h_cage',  label:'ネコを抱いてケージに戻す',   goal:'ネコをケージまで連れて帰る', rates:{uni:0,twi:1,fun:2,emp:1}},
+    {id:'h_clinic',label:'病院の日、ネコを捕まえる',   goal:'病院の日、ネコを無事に捕まえる', rates:{uni:1,twi:1,fun:2,emp:1}}
+  ]},
+  {id:'hg_care', label:'お世話をする', items:[
+    {id:'h_nail',  label:'爪切りをする',               goal:'爪切りをやり遂げる',       rates:{uni:1,twi:1,fun:2,emp:1}},
+    {id:'h_bath',  label:'お風呂に入れる',             goal:'お風呂に入れて乾かす',     rates:{uni:0,twi:1,fun:2,emp:0}},
+    {id:'h_feed',  label:'好き嫌いするネコにごはんをあげる', goal:'ごはんを食べてもらう', rates:{uni:1,twi:1,fun:2,emp:1}},
+    {id:'h_med',   label:'薬を飲ませる',               goal:'薬を飲ませて治す',         rates:{uni:1,twi:2,fun:1,emp:0}}
+  ]},
+  {id:'hg_shoot', label:'記録する', items:[
+    {id:'h_photo',  label:'かわいい瞬間を写真に収める',   goal:'かわいい瞬間を撮る',     rates:{uni:2,twi:1,fun:1,emp:1}},
+    {id:'h_best',   label:'ベストショットを1枚撮る',       goal:'ベストショットを撮る',   rates:{uni:1,twi:2,fun:1,emp:0}}
+  ]},
+  {id:'hg_play', label:'遊ぶ', items:[
+    {id:'h_tease', label:'猫じゃらしで遊ばせる',         goal:'ネコを夢中にさせて遊ばせる', rates:{uni:0,twi:1,fun:2,emp:1}},
+    {id:'h_play',  label:'おもちゃで一緒に遊ぶ',         goal:'おもちゃで一緒に遊ぶ',       rates:{uni:0,twi:0,fun:2,emp:1}}
+  ]},
+  {id:'hg_guard', label:'守る・防ぐ', items:[
+    {id:'h_guard', label:'ネコを危険物から守る',         goal:'危険物からネコを守る',     rates:{uni:1,twi:1,fun:1,emp:1}},
+    {id:'h_door',  label:'脱走を防いで戸締りする',       goal:'脱走せずに戸締りを済ませる', rates:{uni:1,twi:2,fun:1,emp:0}}
+  ]},
+  {id:'hg_live', label:'邪魔と付き合う', items:[
+    {id:'h_work',  label:'ネコの邪魔に入られながら仕事を終わらせる', goal:'邪魔をやり過ごして仕事を終える', rates:{uni:2,twi:2,fun:2,emp:2}},
+    {id:'h_sleep', label:'ネコに乗られたまま、動かずに眠る',         goal:'ネコを起こさずに眠る',           rates:{uni:2,twi:1,fun:1,emp:2}}
+  ]}
+];
+CT.PURPOSES_HUMAN = CT.PURPOSE_GROUPS_HUMAN.reduce(function(a,g){ return a.concat(g.items); }, []);
+
+/* ---------------- 人（飼い主）の行動8種（手段の材料・人操作のとき） ---------------- */
+CT.HUMAN_ACTIONS = [
+  {id:'h_find',  label:'さがす',           verb:'部屋じゅうをさがす',           note:'探索',
+   variants:['部屋じゅうをさがす','足あとをたどる','ごはんの音で呼ぶ'],
+   rates:{uni:1,twi:2,fun:1,emp:1}, why:'見つける楽しさは、隠れ場所の数と見える範囲の制約で作る'},
+  {id:'h_call',  label:'呼ぶ',             verb:'ネコを呼んで誘い出す',         note:'誘い出し',
+   variants:['ネコを呼んで誘い出す','音でおびき寄せる','おもちゃで誘う'],
+   rates:{uni:1,twi:1,fun:2,emp:2}, why:'呼んでも応じるかどうかの緊張が面白さになる'},
+  {id:'h_lure',  label:'誘う',             verb:'おやつとおもちゃで誘う',       note:'誘導',
+   variants:['おやつとおもちゃで誘う','物で道を作って誘う','高い場所に誘って導く'],
+   rates:{uni:1,twi:1,fun:2,emp:1}, why:'人の作戦とネコの気まぐれの綱引きになる'},
+  {id:'h_catch', label:'捕まえる',         verb:'すきをうかがって抱き上げる',   note:'タイミング',
+   variants:['すきをうかがって抱き上げる','逃げたら待って捕まえる','箱で誘って捕まえる'],
+   rates:{uni:0,twi:1,fun:2,emp:1}, why:'体力とタイミングの勝負。時間・回数の制約と噛む'},
+  {id:'h_care',  label:'お世話をする',     verb:'ネコのお世話をやり遂げる',     note:'お手入れ',
+   variants:['ネコのお世話をやり遂げる','暴れるネコをなだめながら進める','逃げられる前に済ませる'],
+   rates:{uni:1,twi:1,fun:2,emp:1}, why:'ネコが嫌がる行動なので、音ゲージ制約と最も噛み合う'},
+  {id:'h_shoot', label:'撮る',             verb:'シャッターを切る',             note:'記録',
+   variants:['シャッターを切る','ベストショットを狙って待つ','動画に収める'],
+   rates:{uni:2,twi:2,fun:1,emp:1}, why:'良い瞬間を待つ構図。時間制約と自然に噛む'},
+  {id:'h_guard', label:'守る',             verb:'危険物を片付けて守る',         note:'同時管理',
+   variants:['危険物を片付けて守る','脱走のすきを防ぐ','物を守りきる'],
+   rates:{uni:1,twi:1,fun:1,emp:1}, why:'同時にいくつも見る管理が、そのまま難度になる'},
+  {id:'h_endure',label:'我慢する',         verb:'動かずに耐える',               note:'じっとする',
+   variants:['動かずに耐える','邪魔をやり過ごす','寝息を立てずに眠る'],
+   rates:{uni:2,twi:2,fun:2,emp:2}, why:'邪魔してくるネコが愛おしい、共感の塊の操作'}
+];
+
 /* ---------------- ワークの候補（各カテゴリ3つまで+その他記入） ----------------
    ラベルには出所のコメントを書かない（生徒の選択にバイアスが出るため）。
    ------------------------------------------------------------ */
@@ -254,4 +328,4 @@ CT.PHASES = [
   {id:'rush',  at:'残り7秒',  name:'ラッシュ（2段目）', speed:'×1.28', note:'画面の縁を赤い帯に。BGMに1音足す'},
   {id:'last',  at:'残り3秒',  name:'最後（3段目）',     speed:'×1.42', note:'明滅。ここで誰でも声が出る'}
 ];
-CT.VERSION = {tag:'FB反映版 v0.3.0', date:'2026-11-01'};
+CT.VERSION = {tag:'誰を操作する版 v0.4.0', date:'2026-11-01'};

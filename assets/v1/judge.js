@@ -169,7 +169,7 @@ function judge(state){
     for(var p=0;p<cons.length;p++){ if(band(cons[p].id, cons[p].num)==='just'){ first = cons[p]; break; } }
     var cell2 = FIT[act.id][first.id];
     return {color:'green', verdict:'ちょうどよい',
-            reason:'「' + first.cons.tpl.replace('◯◯', String(first.num)) + '」が効いていて、' + (cell2 ? cell2.why : '手段に合った制約です'),
+            reason:'「' + (first.cons.id==='c_phys' ? '障害（' + first.num + '種）を避けながら' : first.cons.id==='c_info' ? '音ゲージ' + first.num + '%を維持しながら' : first.cons.tpl.replace('◯◯', String(first.num))) + '」が効いていて、' + (cell2 ? cell2.why : '手段に合った制約です'),
             fixes:[]};
   }
   /* 7) 境目は黄 */
@@ -212,5 +212,79 @@ CT.judge = judge;
 CT.gameCheck = gameCheck;
 CT.FIT = FIT;
 CT.band = band;
+
+/* ---------------- 人操作の相性表（8種 × 5型 = 40セル） ----------------
+   人が操作キャラのときは、ネコが「共演者・相手役」になる。
+   ------------------------------------------------------------ */
+const FIT_HUMAN = {
+  h_find: {
+    c_time:  {fit:'◎', why:'残り時間で探せる場所が減る。探索と最も相性がよい'},
+    c_count: {fit:'○', why:'呼べる回数を絞ると、探す場所の選びが慎重になる'},
+    c_space: {fit:'◎', why:'探せる部屋を狭めると、隠れ場所の情報が値打つ'},
+    c_phys:  {fit:'○', why:'物が動いていると探索が難しくなる。避けゲーに寄せない'},
+    c_info:  {fit:'◎', why:'見える範囲が狭いほど「探す」が緊張する。最強の組み合わせ'}
+  },
+  h_call: {
+    c_time:  {fit:'○', why:'呼んで待つ時間のやりくりになる'},
+    c_count: {fit:'◎', why:'呼べる回数がそのまま難度になる。最も効く制約'},
+    c_space: {fit:'○', why:'声の届く範囲の指定と噛み合う'},
+    c_phys:  {fit:'△', why:'物理障害より「音」の制約が主役になる'},
+    c_info:  {fit:'○', why:'音ゲージと呼ぶ音が同居して緊張を作る'}
+  },
+  h_lure: {
+    c_time:  {fit:'○', why:'誘って到達するまでの時間で締められる'},
+    c_count: {fit:'○', why:'使えるおやつの数が難度のつまみになる'},
+    c_space: {fit:'○', why:'道を作る幅の指定と自然に噛む'},
+    c_phys:  {fit:'◎', why:'誘いの経路に危険があると、選択が生まれる'},
+    c_info:  {fit:'△', why:'誘い先が見えないと理不尽になる。弱めに'}
+  },
+  h_catch: {
+    c_time:  {fit:'○', why:'体力勝負を時間で締められる'},
+    c_count: {fit:'◎', why:'抱けるチャンスが◯回、がそのまま難度になる'},
+    c_space: {fit:'△', why:'狭すぎると逃げ場がなくなり簡単になる'},
+    c_phys:  {fit:'○', why:'捕まえたい瞬間に危険があると選択が生まれる'},
+    c_info:  {fit:'○', why:'動かず待つ時間と音ゲージが噛み合う'}
+  },
+  h_care: {
+    c_time:  {fit:'△', why:'お世話は時間より「ネコの機嫌」で決まる。補助の制約'},
+    c_count: {fit:'○', why:'やれることが◯回まで、が資源管理になる'},
+    c_space: {fit:'△', why:'狭くすると逃げ場がなくなり簡単になる'},
+    c_phys:  {fit:'○', why:'暴れる・逃げる動きのパターンが危険になる'},
+    c_info:  {fit:'◎', why:'音ゲージ維持はお世話ゲームの本丸。最強の組み合わせ'}
+  },
+  h_shoot: {
+    c_time:  {fit:'◎', why:'◯秒でベストショット、の勝負に直結する'},
+    c_count: {fit:'○', why:'シャッターは◯回まで、が資源管理になる'},
+    c_space: {fit:'○', why:'狙える範囲の指定と噛み合う'},
+    c_phys:  {fit:'△', why:'邪魔が多すぎると構図が作れない。2種まで'},
+    c_info:  {fit:'○', why:'音を立てない撮影、というルールと噛む'}
+  },
+  h_guard: {
+    c_time:  {fit:'○', why:'守る時間の長さが、そのまま勝負になる'},
+    c_count: {fit:'○', why:'手の届く回数で管理の難しさを作る'},
+    c_space: {fit:'◎', why:'守る範囲の指定が、この手段の本丸'},
+    c_phys:  {fit:'○', why:'危険物の動きのパターンで難度を調整する'},
+    c_info:  {fit:'△', why:'見えない場所を守らせるのは理不尽になりがち'}
+  },
+  h_endure: {
+    c_time:  {fit:'◎', why:'あと◯秒耐える、の勝負そのものになる'},
+    c_count: {fit:'○', why:'動いていい回数を絞ると緊張が生まれる'},
+    c_space: {fit:'○', why:'動ける範囲が狭いほど「耐える」が難しくなる'},
+    c_phys:  {fit:'○', why:'邪魔の種類が増えるほど耐える価値が上がる'},
+    c_info:  {fit:'◎', why:'音ゲージ維持は「我慢」の操作の本丸'}
+  }
+};
+CT.FIT_HUMAN = FIT_HUMAN;
+Object.keys(FIT_HUMAN).forEach(function(k){ FIT[k] = FIT_HUMAN[k]; });
+
+/* findAction は猫・人の両リストを見る */
+var _findAction = findAction;
+findAction = function(id){
+  var r = _findAction(id);
+  if(r) return r;
+  for(var i=0;i<CT.HUMAN_ACTIONS.length;i++){ if(CT.HUMAN_ACTIONS[i].id===id) return CT.HUMAN_ACTIONS[i]; }
+  return null;
+};
+CT.findAction = findAction;
 
 })();

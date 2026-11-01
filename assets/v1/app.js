@@ -24,7 +24,7 @@ const STEPS = [
 ];
 
 function fresh(){
-  return {step:'intro', tab:'plan', title:'',
+  return {step:'intro', tab:'plan', title:'', subject:'sub_cat',
     roles:{shikiri:'', kiroku:'', tedate:'', shibari:''},
     profile:{good:[], bad:[], feat:[], target:[],
              other:{good:'', bad:'', feat:'', target:''}},
@@ -139,11 +139,16 @@ R.profile = () => [
 nav('intro', 'purpose')
 ].join('');
 
-R.purpose = () => [
+R.purpose = () => {
+  const human = state.subject==='sub_human';
+  const groups = human ? CT.PURPOSE_GROUPS_HUMAN : CT.PURPOSE_GROUPS;
+  return [
 '<section class="card"><div class="eyebrow">STEP 02 / ねらい（目的・E）</div>',
-'<h2 class="step">作りたいゲームはどれ？（ネコに何をさせたい？）</h2>',
+'<h2 class="step">作りたいゲームはどれ？</h2>',
+'<div class="lbl">誰を操作する？（グループの案の中心に寄せる・切り替えると選び直しになります）</div>',
+'<div class="chips">' + CT.SUBJECTS.map(s=>'<button type="button" class="chip'+((human?(s.id==='sub_human'):(s.id==='sub_cat'))?' on':'')+'" data-subject="'+s.id+'">'+esc(s.label)+'</button>').join('') + '</div>',
 '<p class="lead">ここで作りたいゲームを決めます。漠然としているときは、この中から選べば企画になります。カテゴリごとに並んでいます。</p>',
-CT.PURPOSE_GROUPS.map(g=>'<div class="lbl">'+esc(g.label)+'</div>' + chips(g.items, 'purpose', false)).join(''),
+groups.map(g=>'<div class="lbl">'+esc(g.label)+'</div>' + chips(g.items, 'purpose', false)).join(''),
 '<div class="lbl">その他（ここに書けば、それが目的になります）</div>',
 '<input type="text" data-purposeother placeholder="自由に書く（例: ネコがケーキを守る）" value="'+esc(state.purposeOther||'')+'">',
 '<div class="lbl">' + esc(CT.PERSONA_LABEL) + '</div>',
@@ -152,16 +157,19 @@ CT.PURPOSE_GROUPS.map(g=>'<div class="lbl">'+esc(g.label)+'</div>' + chips(g.ite
 '<p class="lead" style="margin-top:6px">' + esc(CT.PERSONA_EX) + '</p>',
 agreeBlock('purpose', 'ねらいは しきり役 がまとめて全員に確認'),
 nav('profile', 'action')
-].join('');
+  ].join('');
+};
 
 R.action = () => {
-  const act = CT.ACTIONS.find(a=>a.id===state.action);
-  const rest = CT.ACTIONS.filter(a=>a.id!==state.action);
+  const human = state.subject==='sub_human';
+  const LIST = human ? CT.HUMAN_ACTIONS : CT.ACTIONS;
+  const act = LIST.find(a=>a.id===state.action);
+  const rest = LIST.filter(a=>a.id!==state.action);
   return [
 '<section class="card"><div class="eyebrow">STEP 03 / てだて（手段・M）</div>',
-'<h2 class="step">このゲームで中心となる猫のアクションは？</h2>',
-'<p class="lead">1つ選ぶと「ゲームになる組み立て」が3つ出ます。選び直せます。</p>',
-chips(CT.ACTIONS, 'action', false),
+'<h2 class="step">' + (human ? 'このゲームで、飼い主（人）がすることは？' : 'このゲームで中心となる猫のアクションは？') + '</h2>',
+'<p class="lead">1つ選ぶと「ゲームになる組み立て」が3つ出ます。選び直せます。' + (human ? '（ネコは共演者として出てきます）' : '') + '</p>',
+chips(LIST, 'action', false),
 (act ? [
 '<div class="lbl">組み立て（このゲームでは、どう使う？）</div>',
 '<div class="chips">' + act.variants.map((v,i)=>'<button type="button" class="chip'+(state.variant===i?' on':'')+'" data-variant="'+i+'">'+esc(v)+'</button>').join('') + '</div>',
@@ -321,6 +329,7 @@ document.addEventListener('click', e=>{
   const t = e.target.closest('button, input[type=checkbox]');
   if(!t) return;
   if(t.dataset.tab){ state.tab = t.dataset.tab; render(); return; }
+  if(t.dataset.subject){ if(state.subject!==t.dataset.subject){ state.subject = t.dataset.subject; state.purpose=''; state.purposeOther=''; state.action=''; state.variant=0; state.subAction=''; state.cons=[]; state.packLabel=''; } render(); return; }
   if(t.dataset.go !== undefined && t.dataset.go !== ''){ if(t.disabled) return; state.step = t.dataset.go; render(); window.scrollTo(0,0); return; }
   if(t.dataset.pick){ toggle(t.dataset.pick, t.dataset.id, t.dataset.multi==='1'); render(); return; }
   if(t.dataset.coat){ state.coat = t.dataset.coat; render(); return; }
