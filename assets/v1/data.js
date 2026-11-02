@@ -323,6 +323,39 @@ CT.PACKS = [
    text:'{ob}・{ob2}・{ob3}の3種を避ける。ごちゃごちゃして楽しい'},
   {id:'pk_narobst', label:'せま+おじゃまもの', items:[{id:'c_space',num:200},{id:'c_phys',num:1}],
    text:'動けるのは横200px。さらに{ob}が動き回っている'}
+,
+  {id:'pk_count2',   label:'かいすう（2回）', items:[{id:'c_count',num:2}],
+   text:'中心アクションは2回まで。一発勝負に近い緊張感'},
+  {id:'pk_naronly',  label:'せましばり（きつめ）', items:[{id:'c_space',num:120}],
+   text:'動けるのは横120pxだけ。通りどころがほぼ1本になる'},
+  {id:'pk_wideonly', label:'ひろしばり（ゆるめ）', items:[{id:'c_space',num:480}],
+   text:'動けるのは横480px。動き回ってもよいが、それでも制限はある'},
+  {id:'pk_sleephard2', label:'こえゲージ（超きびしめ）', items:[{id:'c_info',num:25}],
+   text:'ゲージ25%を維持。ほぼ音を立てられない。上級者向け'},
+  {id:'pk_sleepwide', label:'こえゲージ（ゆるめ）', items:[{id:'c_info',num:80}],
+   text:'ゲージ80%を維持。音に敏感な型のはじめの一歩'},
+  {id:'pk_timeob2',  label:'じかん+おじゃまもの（きつめ）', items:[{id:'c_time',num:30},{id:'c_phys',num:3}],
+   text:'30秒以内に、{ob}・{ob2}・{ob3}を避けながら達成する'},
+  {id:'pk_countob',  label:'かいすう+おじゃまもの', items:[{id:'c_count',num:5},{id:'c_phys',num:2}],
+   text:'中心アクションは5回まで。{ob}と{ob2}も避ける'},
+  {id:'pk_narsleep', label:'せま+こえゲージ', items:[{id:'c_space',num:240},{id:'c_info',num:60}],
+   text:'動けるのは横240px。{who}を起こさずに（ゲージ60%）'},
+  {id:'pk_timeshort', label:'じかん（きつめ）', items:[{id:'c_time',num:15}],
+   text:'15秒以内。一気に決める爽快感がある（ただし「むり」になりやすい。点検で見る）'},
+  {id:'pk_countob3', label:'かいすう+おじゃまもの（きつめ）', items:[{id:'c_count',num:3},{id:'c_phys',num:3}],
+   text:'中心アクションは3回まで。{ob}・{ob2}・{ob3}も避ける'},
+  {id:'pk_narcount2', label:'せま+かいすう（きつめ）', items:[{id:'c_space',num:120},{id:'c_count',num:2}],
+   text:'横120pxだけ・2回まで。ミスを許されない1本道'},
+  {id:'pk_sleepob2', label:'こえゲージ+おじゃまもの（きつめ）', items:[{id:'c_info',num:40},{id:'c_phys',num:2}],
+   text:'ゲージ40%を維持しながら、{ob}と{ob2}も避ける'},
+  {id:'pk_nartime2', label:'せま+じかん（きつめ）', items:[{id:'c_space',num:160},{id:'c_time',num:30}],
+   text:'横160px・30秒以内。狭くて短い。ここまでできると上達'},
+  {id:'pk_timeobeasy', label:'じかん+おじゃまもの（ゆるめ）', items:[{id:'c_time',num:60},{id:'c_phys',num:1}],
+   text:'60秒以内に、{ob}を避けながら。はじめてでも届く'},
+  {id:'pk_counteasy', label:'かいすう（ゆるめ）', items:[{id:'c_count',num:10}],
+   text:'中心アクションは10回まで。何度も試せる'},
+  {id:'pk_hardcore', label:'むずかしめ（3つ）', items:[{id:'c_time',num:25},{id:'c_phys',num:2},{id:'c_info',num:45}],
+   text:'25秒以内・{ob}と{ob2}を避け・ゲージ45%維持。全部入りの最終挑戦用'}
 ];
 CT.PACKS_PAGE = 4;
 
@@ -467,4 +500,4 @@ CT.inferEMS = function(st){
   ].join('／');
   return {ok: missing.length === 0, missing: missing, sentence: sentence};
 };
-CT.VERSION = {tag:'しばり16案版 v0.9.0', date:'2026-11-02'};
+CT.VERSION = {tag:'しばり32案版 v1.0.0', date:'2026-11-02'};
