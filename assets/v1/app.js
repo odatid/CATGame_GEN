@@ -24,7 +24,7 @@ const STEPS = [
 ];
 
 function fresh(){
-  return {step:'intro', tab:'plan', title:'', subject:'sub_cat',
+  return {step:'intro', tab:'plan', title:'', subject:'sub_cat', emsConfirmed:false, genreHint:'', pattern:'',
     roles:{shikiri:'', kiroku:'', tedate:'', shibari:''},
     profile:{good:[], bad:[], feat:[], target:[],
              other:{good:'', bad:'', feat:'', target:''}},
@@ -176,6 +176,9 @@ R.purpose = () => {
 groups.map(g=>'<div class="lbl">'+esc(g.label)+'</div>' + chips(g.items, 'purpose', false)).join(''),
 '<div class="lbl">その他（ここに書けば、それが目的になります）</div>',
 '<input type="text" data-purposeother placeholder="自由に書く（例: ネコがケーキを守る）" value="'+esc(state.purposeOther||'')+'">',
+'<div class="lbl">こんなジャンルも考えられます（行き詰まったら・押すと EMS の入り口へ飛びます）</div>',
+'<div class="chips">' + CT.GENRE_HINTS.map(h=>'<button type="button" class="chip small" data-genre="'+h.id+'">'+esc(h.label)+'：'+esc(h.desc)+'</button>').join('') + '</div>',
+''+
 '<div class="lbl">' + esc(CT.PERSONA_LABEL) + '</div>',
 '<div class="cons-row"><input type="text" data-persona-a placeholder="◯◯したい" value="'+esc((state.persona||'').split('のに')[0]||'')+'"><span class="unit">のに</span></div>',
 '<div class="cons-row"><input type="text" data-persona-b placeholder="□□でできない" value="'+esc(((state.persona||'').split('のに')[1]||'').replace('でできない',''))+'"><span class="unit">でできない</span></div>',
@@ -252,13 +255,28 @@ nav('action', 'check', '点検へ →')
 };
 
 R.check = () => {
+  const inf = CT.inferEMS(state);
+  const needConfirm = !inf.ok && !state.emsConfirmed;
+  const head = [
+'<section class="card"><div class="eyebrow">STEP 05 / 点検</div>',
+'<h2 class="step">ゲーム性チェック</h2>'
+  ];
+  if(needConfirm){
+    return head.concat([
+'<div class="lbl">EMSの確認（わからないで進んできた場合の確認です）</div>',
+'<div class="oneline">'+esc(inf.sentence)+'</div>',
+'<p class="lead">回答から想定できるEMSはこれです。あってる？</p>',
+'<div class="nav"><button type="button" class="btn ghost" data-emsfix>違う（決める画面へ飛ぶ）</button>',
+'<button type="button" class="btn" data-emsok>合っている（このEMSで点検する）</button></div>',
+'<p class="lead">「違う」を押すと、まだ決まっていない画面（02 ねらい ／ 03 てだて ／ 04 しばり）に飛びます。</p>',
+nav(state.step, null)
+    ].join('')).join('');
+  }
   const J = CT.judge(state);
   const G = CT.gameCheck(state);
   const W = CT.JUDGE_WORDS[J.color];
   const P = CT.planOf(state);
-  return [
-'<section class="card"><div class="eyebrow">STEP 05 / 点検</div>',
-'<h2 class="step">ゲーム性チェック</h2>',
+  return head.concat([
 G.map(g=>'<div class="checkrow"><span class="ax">'+esc(g.name)+'</span><span class="mark m'+g.mark+'">'+g.mark+'</span><span class="cm">'+esc(g.comment)+'</span></div>').join(''),
 '<div class="lbl">EMS判定（3色・点数なし）</div>',
 '<div class="verdict '+J.color+'">'+esc(W.word)+'（'+J.color+'）</div>',
@@ -271,7 +289,7 @@ G.map(g=>'<div class="checkrow"><span class="ax">'+esc(g.name)+'</span><span cla
 '<div class="nav"><button type="button" class="btn ghost" data-go="cons">← 直す（しばり）</button>'
  + '<button type="button" class="btn ghost" data-go="action">← 直す（てだて）</button>'
  + '<button type="button" class="btn" data-go="plan">ゲーム案へ →</button></div>'
-  ].join('');
+  ].join('')).join('');
 };
 
 R.plan = () => {
@@ -350,6 +368,7 @@ function toggle(key, vid, multi){
     arr.push(vid);
   } else {
     state[key] = (state[key]===vid) ? '' : vid;
+    if(key==='purpose'){ state.emsConfirmed = false; }
   }
 }
 
@@ -357,6 +376,27 @@ document.addEventListener('click', e=>{
   const t = e.target.closest('button, input[type=checkbox]');
   if(!t) return;
   if(t.dataset.tab){ state.tab = t.dataset.tab; render(); return; }
+  if(t.dataset.genre){
+    const h = CT.GENRE_HINTS.find(x=>x.id===t.dataset.genre);
+    if(h){
+      state.genreHint = h.id;
+      state.purpose = h.set.purpose; state.purposeOther = '';
+      state.pattern = h.set.pattern;
+      state.action=''; state.variant=0; state.subAction=''; state.cons=[]; state.packLabel='';
+      state.emsConfirmed = false;
+      state.step = 'action';
+      toast('『' + h.label + '』で考えます');
+      render(); window.scrollTo(0,0);
+    }
+    return;
+  }
+  if(t.dataset.emsok !== undefined && t.dataset.emsok !== ''){ state.emsConfirmed = true; render(); return; }
+  if(t.dataset.emsfix !== undefined && t.dataset.emsfix !== ''){
+    const inf = CT.inferEMS(state);
+    const first = inf.missing[0];
+    state.step = (first==='purpose') ? 'purpose' : (first==='action') ? 'action' : 'cons';
+    render(); window.scrollTo(0,0); return;
+  }
   if(t.dataset.subject){ if(state.subject!==t.dataset.subject){ state.subject = t.dataset.subject; state.purpose=''; state.purposeOther=''; state.action=''; state.variant=0; state.subAction=''; state.cons=[]; state.packLabel=''; } render(); return; }
   if(t.dataset.go !== undefined && t.dataset.go !== ''){ if(t.disabled) return; state.step = t.dataset.go; render(); window.scrollTo(0,0); return; }
   if(t.dataset.pick){ toggle(t.dataset.pick, t.dataset.id, t.dataset.multi==='1'); render(); return; }

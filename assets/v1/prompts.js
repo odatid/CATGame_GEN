@@ -71,7 +71,9 @@ function planOf(st){
   const consText = cons.map(c=>'・'+c.disp).join('\n');
   const success = (cons.length ? cons.map(c=>c.disp).join('、') + '、' : '')
     + (pur ? pur.goal : '目的を達成する');
+  const gh = (st.genreHint && CT.GENRE_HINTS) ? CT.GENRE_HINTS.find(h=>h.id===st.genreHint) : null;
   return {
+    genreLabel: gh ? gh.label : '',
     patternId: st.pattern || '',
     subject: (st.subject==='sub_human') ? CT.SUBJECTS[1] : CT.SUBJECTS[0],
     title, action:act, variantIdx:v, centerVerb, sub, subVerb: sub ? sub.verb : '',
@@ -98,6 +100,7 @@ function promptPlan(P, J, G){
   return [
 '【1枚企画書 — ' + P.title + '】',
 '',
+(P.genreLabel ? 'ジャンルの方向: ' + P.genreLabel : 'ジャンルの方向: 選ばなかった（アクション寄りで組み立てる）'),
 '■ EMS（Ends and Means Structure／手段目的構造）',
 '【目的（E）】' + goalOf(P),
 '【手段（M）】中心: ' + (P.centerVerb || '未記入') + '（ネコの' + (P.action ? P.action.label : '未記入') + '）',

@@ -50,6 +50,10 @@ CT.ACTIONS = [
    variants:['削って道を作る','爪とぎで目印を残す','柱を削って高く伸びる'],
    rates:{uni:2,twi:2,fun:1,emp:0},
    why:'発想の変換が要る挑戦用の手段'},
+  {id:'a_arrange', label:'ものを置いて道を作る', verb:'置いて導く', note:'配置パズル',
+   variants:['置いて導く','重ねて階段を作る','落としてスイッチを押す'],
+   rates:{uni:2,twi:1,fun:1,emp:0},
+   why:'置く場所を選ぶ思考が、そのまま難度になる'},
   {id:'a_knock', label:'ものをひっくり返す', verb:'机の上をひっくり返して落とす', note:'破壊カウント',
    variants:['机の上をひっくり返して落とす','手で押して落とす','体当たりで揺らして落とす'],
    rates:{uni:1,twi:1,fun:2,emp:0},
@@ -118,11 +122,24 @@ CT.PURPOSE_GROUPS = [
   ]},
   {id:'pg_puzzle', label:'解く・開く', items:[
     {id:'p_pz_fridge', label:'しかけのある扉を解いて冷蔵庫へ',   goal:'しかけを解いて冷蔵庫を開ける', rates:{uni:1,twi:2,fun:1,emp:0}},
-    {id:'p_pz_kitten', label:'段ボールの山をどけて子猫を助ける', goal:'段ボールをどけて子猫を助ける', rates:{uni:1,twi:1,fun:1,emp:2}}
+    {id:'p_pz_kitten', label:'段ボールの山をどけて子猫を助ける', goal:'段ボールをどけて子猫を助ける', rates:{uni:1,twi:1,fun:1,emp:2}},
+    {id:'p_pz_slide', label:'すべり台と木の配置を変えてネコをゴールへ導く', goal:'しかけの配置でネコをゴールへ導く', rates:{uni:2,twi:2,fun:1,emp:0}}
   ]},
   {id:'pg_balance', label:'運ぶ・バランス', items:[
     {id:'p_bal_wall',  label:'塀の上をバランスよく歩いて帰る', goal:'落ちずに塀の上を渡る',        rates:{uni:0,twi:1,fun:1,emp:0}},
     {id:'p_bal_carry', label:'口にくわえた猫缶を落とさずに運ぶ', goal:'落とさずに猫缶を運ぶ',     rates:{uni:0,twi:1,fun:1,emp:0}}
+  ]},
+  {id:'pg_actpuzzle', label:'落ちてくる・積む（アクションパズル）', items:[
+    {id:'p_ap_drop', label:'落ちてくるネコを積んでタワーを作る', goal:'ネコタワーを高く積む', rates:{uni:2,twi:1,fun:2,emp:0}},
+    {id:'p_ap_fill', label:'隙間にちょうどよくネコをはめて穴を埋める', goal:'すきまをぴったり埋める', rates:{uni:1,twi:2,fun:1,emp:0}}
+  ]},
+  {id:'pg_puzzact', label:'仕かけを解きながら進む（パズルアクション）', items:[
+    {id:'p_pa_switch', label:'床が動く中で3つのスイッチを順に踏む', goal:'スイッチを順番どおりに踏む', rates:{uni:1,twi:2,fun:1,emp:0}},
+    {id:'p_pa_dog', label:'動く板を切り替えて水を避けて進む', goal:'水を避けて向こう側へ進む', rates:{uni:1,twi:1,fun:2,emp:0}}
+  ]},
+  {id:'pg_rogue', label:'なんども挑戦する（ローグライク・ローグライト）', items:[
+    {id:'p_rl_run', label:'変わる仕かけの塔を、1回の挑戦で登り切る', goal:'変わる仕かけの塔を登り切る', rates:{uni:2,twi:2,fun:1,emp:0}},
+    {id:'p_rlt_run', label:'挑戦するたびに少しずつ楽になる道を選ぶ', goal:'挑戦を重ねてたどり着く', rates:{uni:2,twi:2,fun:1,emp:1}}
   ]},
   {id:'pg_water', label:'水から逃げる', items:[
     {id:'p_wat_bath',  label:'お風呂から逃げて高い所へ上がる', goal:'お風呂から逃げて高い所へ逃げる', rates:{uni:1,twi:1,fun:2,emp:0}},
@@ -390,4 +407,37 @@ function bgmOf(purposeId){
 CT.stageOf = stageOf;
 CT.bgmOf = bgmOf;
 
-CT.VERSION = {tag:'カメラ版 v0.7.0', date:'2026-11-02'};
+CT.GENRE_HINTS = [
+  {id:'gh_puzzle',    label:'パズル',           desc:'手番制で考えて解く。動く競争はなし。じっくり考えるグループへ', set:{purpose:'p_pz_slide', pattern:'pg_puzzle'}},
+  {id:'gh_actpuzzle', label:'アクションパズル', desc:'落ちてくる物を置きながら解く。考える＋間に合う（スイカゲーム系）', set:{purpose:'p_ap_drop', pattern:'pg_actpuzzle'}},
+  {id:'gh_puzzact',   label:'パズルアクション', desc:'床や敵が動く中で、仕かけを解きながら進む', set:{purpose:'p_pa_switch', pattern:'pg_puzzact'}},
+  {id:'gh_roguelike', label:'ローグライク',     desc:'1回の挑戦で登り切る。失敗したら最初から。シビアに楽しむ', set:{purpose:'p_rl_run', pattern:'pg_rogue'}},
+  {id:'gh_roguelite', label:'ローグライト',     desc:'失敗しても少しずつ楽になる。挑戦のたびに先へ進む', set:{purpose:'p_rlt_run', pattern:'pg_rogue'}}
+];
+CT.inferEMS = function(st){
+  st = st || {};
+  const ALLP = CT.PURPOSES.concat(CT.PURPOSES_HUMAN || []);
+  const pur = ALLP.find(function(p){ return p.id === st.purpose; })
+    || ((st.purposeOther && String(st.purposeOther).trim()) ? {goal: String(st.purposeOther).trim()} : null);
+  const ALLA = CT.ACTIONS.concat(CT.HUMAN_ACTIONS || []);
+  const act = ALLA.find(function(a){ return a.id === st.action; }) || null;
+  const verb = act ? (typeof st.variant === 'number' && act.variants[st.variant] ? act.variants[st.variant] : act.verb) : null;
+  const who = st.subject === 'sub_human' ? '飼い主が' : 'ネコが';
+  const cons = (st.cons || []).map(function(c){
+    const d = CT.CONSTRAINTS.find(function(x){ return x.id === c.id; });
+    if(!d) return '';
+    const n = parseFloat(c.num);
+    return isFinite(n) ? d.tpl.replace('◯◯', String(n)) : d.tpl;
+  }).filter(Boolean);
+  const missing = [];
+  if(!pur) missing.push('purpose');
+  if(!verb) missing.push('action');
+  if(cons.length === 0) missing.push('cons');
+  const sentence = [
+    '目的: ' + (pur ? pur.goal : '（02 ねらい で決める）'),
+    '手段: ' + (verb ? who + verb + 'して' : '（03 てだて で決める）'),
+    '制約: ' + (cons.length ? cons.join('、') : '（04 しばり で決める）')
+  ].join('／');
+  return {ok: missing.length === 0, missing: missing, sentence: sentence};
+};
+CT.VERSION = {tag:'ジャンル誘導とEMS確認版 v0.8.0', date:'2026-11-02'};
