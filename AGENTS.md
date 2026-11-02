@@ -30,15 +30,16 @@ EMS(Ends and Means Structure／手段目的構造)を高校生が自分の手で
 - 型ライブラリ(patterns.js): 猫の目的グループ15型(pg_*)＋Unityキット5型(pt_*)を実装。本番制限版は CT.LIMITED でUnityキット5型だけをジャンルカードに出す。検証は tools/pattern_check.html
 - しばりおすすめ: 32案(8ページ巡回)・文言は選んだ苦手から自動生成
 - 本番リハーサル: tools/rehearsal_check.html で制限版5仕かけを目的→出力まで通し、5/5 PASS。Unity依頼は型ごとのシーン/キットを明記(pt_escape は SC_Base_Vertical)
-- 検証: tools/(judge_check.html・cat_draw_check.html・pattern_check.html・rehearsal_check.html)。変更後は必ず回す
+- 生成テスト2往復目: 水位は3段グラデーション＋水面線＋sin波、被弾は赤フラッシュ＋無敵点滅。tools/generation_check.html 20/20、tools/engine_check.html 12/12
+- 検証: tools/(judge_check.html・cat_draw_check.html・pattern_check.html・rehearsal_check.html・generation_check.html・engine_check.html)。変更後は必ず回す
 
 ## 次のタスク候補(2026-11-02 更新)
 
 - 完了: 型ライブラリの拡張(猫の目的グループ15型＋Unityキット5型、ジャンルカード16枚、tools/pattern_check.html)
 - 完了: `limited` ブランチの本番制限版(CT.LIMITED でUnityキット5型に制限。コードは main と共通)
 - 完了: 本番リハーサル(制限版の5仕かけで目的→出力まで通し、tools/rehearsal_check.html で5/5 PASS)
-1. 生成テストの2往復目(水位グラデーション・被弾点滅の強化)
-2. 本番前の最終確認(教室PC・プロジェクター・音声・localStorage・5仕かけの実操作)
+- 完了: 生成テスト2往復目(水位の3段グラデーション＋水面線＋sin波、被弾の赤フラッシュ＋無敵点滅。tools/generation_check.html 20/20、tools/engine_check.html 12/12)
+1. 本番前の最終確認(教室PC・プロジェクター・音声・localStorage・5仕かけの実操作)
 
 ## ブランチ
 
