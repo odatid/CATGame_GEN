@@ -427,6 +427,16 @@ CT.inferEMS = function(st){
     const d = CT.CONSTRAINTS.find(function(x){ return x.id === c.id; });
     if(!d) return '';
     const n = parseFloat(c.num);
+    if(d.id==='c_phys'){
+      const obs = (st.profile && Array.isArray(st.profile.bad) ? st.profile.bad : [])
+        .map(function(id){ const b = CT.CANDS.bad.find(function(x){ return x.id===id; }); return b ? b.label : null; })
+        .filter(Boolean).slice(0, isFinite(n) ? n : 2);
+      return (obs.length ? obs.join('・') : '障害') + 'を避けながら';
+    }
+    if(d.id==='c_info'){
+      const who2 = st.subject === 'sub_human' ? 'ネコ' : '飼い主';
+      return who2 + 'を起こさずに（音ゲージ' + (isFinite(n) ? n : '◯◯') + '%を維持）';
+    }
     return isFinite(n) ? d.tpl.replace('◯◯', String(n)) : d.tpl;
   }).filter(Boolean);
   const missing = [];
@@ -440,4 +450,4 @@ CT.inferEMS = function(st){
   ].join('／');
   return {ok: missing.length === 0, missing: missing, sentence: sentence};
 };
-CT.VERSION = {tag:'ジャンル誘導とEMS確認版 v0.8.0', date:'2026-11-02'};
+CT.VERSION = {tag:'点検ボタン修正版 v0.8.2', date:'2026-11-02'};

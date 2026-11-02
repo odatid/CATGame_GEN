@@ -41,10 +41,26 @@ function load(){
     const raw = localStorage.getItem(KEY);
     if(raw){ const o = JSON.parse(raw); if(o && o.step){
       const f = fresh(); state = Object.assign(f, o);
-      f.profile.other = {good:'', bad:'', feat:'', target:''};
-      state.profile.other = Object.assign(f.profile.other, (o.profile && o.profile.other) || {});
+      /* 旧版(v0.7以前)の保存データを正規化する(配列・その他欄・新しい項目) */
+      if(!state.profile || typeof state.profile!=='object') state.profile = f.profile;
+      ['good','bad','feat','target'].forEach(function(k){
+        if(!Array.isArray(state.profile[k])) state.profile[k] = [];
+      });
+      if(!state.profile.other || typeof state.profile.other!=='object' || Array.isArray(state.profile.other)){
+        state.profile.other = {good:'',bad:'',feat:'',target:''};
+      }
+      if(typeof state.emsConfirmed!=='boolean') state.emsConfirmed = false;
+      if(typeof state.genreHint!=='string') state.genreHint = '';
+      if(typeof state.pattern!=='string') state.pattern = '';
+      if(!Array.isArray(state.cons)) state.cons = [];
+      state.cons = state.cons.filter(function(c){ return c && typeof c.id==='string'; });
+      if(!state.roles || typeof state.roles!=='object') state.roles = f.roles;
+      if(!state.agree || typeof state.agree!=='object') state.agree = {};
+      if(!state.retro || typeof state.retro!=='object') state.retro = {};
+      /* 古い画面(step)が今の版に無い場合は最初から */
+      if(!STEPS.some(function(x){ return x.id===state.step; })) state.step = 'intro';
     } }
-  }catch(e){}
+  }catch(e){ try{ state = fresh(); }catch(e2){} }
 }
 
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -353,10 +369,22 @@ nav('out', null)
 };
 
 function render(){
-  const fn = R[state.step] || R.intro;
-  app.innerHTML = fn();
-  renderRail(); renderRolebar(); drawPreviews(); save();
-  app.focus({preventScroll:true});
+  try{
+    const fn = R[state.step] || R.intro;
+    app.innerHTML = fn();
+    renderRail(); renderRolebar(); drawPreviews(); save();
+    app.focus({preventScroll:true});
+  }catch(err){
+    /* 画面が固まって見えない、を防ぐ。エラーの内容をその場に出す(原因を消さない) */
+    try{
+      app.innerHTML = '<section class="card"><div class="eyebrow">表示エラー</div>'
+        + '<h2 class="step">画面の作り直しで問題が出ました</h2>'
+        + '<p class="lead">「最初から」を押すと必ず復帰できます(保存は消えます)。</p>'
+        + '<pre class="out">'+esc(err && err.message ? err.message : String(err))+'</pre>'
+        + '<div class="nav"><button type="button" class="btn" data-restart2>最初からやり直す</button></div></section>';
+    }catch(e2){}
+    if(window.console && console.error) console.error(err);
+  }
 }
 
 function toggle(key, vid, multi){
@@ -390,8 +418,9 @@ document.addEventListener('click', e=>{
     }
     return;
   }
-  if(t.dataset.emsok !== undefined && t.dataset.emsok !== ''){ state.emsConfirmed = true; render(); return; }
-  if(t.dataset.emsfix !== undefined && t.dataset.emsfix !== ''){
+  if('restart2' in t.dataset){ try{ localStorage.removeItem(KEY); }catch(e){} state = fresh(); render(); window.scrollTo(0,0); return; }
+  if('emsok' in t.dataset){ state.emsConfirmed = true; render(); return; }
+  if('emsfix' in t.dataset){
     const inf = CT.inferEMS(state);
     const first = inf.missing[0];
     state.step = (first==='purpose') ? 'purpose' : (first==='action') ? 'action' : 'cons';
