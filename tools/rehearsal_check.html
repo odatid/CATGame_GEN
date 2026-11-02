@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>本番リハーサル — 制限版5仕かけ</title>
+<style>
+body{font-family:"Zen Kaku Gothic New","Yu Gothic",sans-serif;background:#141414;color:#eee;padding:14px;line-height:1.6}
+h1{font-size:16px;margin:0 0 8px;color:#e8873d}
+#sum{font-size:18px;font-weight:bold;margin:8px 0}
+table{border-collapse:collapse;font-size:.82rem;margin-top:8px}
+th,td{border:1px solid #3a3733;padding:6px 9px;vertical-align:top}
+th{background:#262421;color:#f7c59f;text-align:left}
+.p{color:#7ddb7d;font-weight:bold}.f{color:#ff7d7d;font-weight:bold}
+.small{color:#bdbab2;font-size:.78rem}
+#json{display:none}
+</style>
+</head>
+<body>
+<h1>本番リハーサル（limited / 5仕かけ）</h1>
+<p class="small">目的→手段→しばり→点検→ゲーム案→出力（Webプロト・Unity依頼）まで自動で通します。再実行は再読み込みだけ。</p>
+<div id="sum">RUNNING</div>
+<table id="tbl"><thead><tr><th>仕かけ</th><th>判定</th><th>Web</th><th>Unity</th><th>シーン</th><th>仕かけキット</th><th>結果</th></tr></thead><tbody></tbody></table>
+<pre id="json"></pre>
+<iframe id="f" src="../index.html" style="display:none"></iframe>
+<script>
+(function(){
+'use strict';
+var cases = [
+  {genre:'gh_kit_move',   pattern:'pt_moveplat', action:'a_climb',  scene:'SC_Base_Side',     kit:'Moving Platform', pack:'pk_timeob',  pages:1},
+  {genre:'gh_kit_coll',   pattern:'pt_collect',  action:'a_pounce', scene:'SC_Base_Top',      kit:'Collectible',     pack:'pk_timeob',  pages:1},
+  {genre:'gh_kit_hide',   pattern:'pt_hide',     action:'a_ambush', scene:'SC_Base_Top',      kit:'Hide Object',     pack:'pk_narcount',pages:1},
+  {genre:'gh_kit_switch', pattern:'pt_switch',   action:'a_arrange',scene:'SC_Base_Top',      kit:'Switch',          pack:'pk_timeob',  pages:1},
+  {genre:'gh_kit_escape', pattern:'pt_escape',   action:'a_climb',  scene:'SC_Base_Vertical', kit:'Hazard Area',     pack:'pk_timeob',  pages:1}
+];
+var f = document.getElementById('f');
+var sum = document.getElementById('sum');
+var tbody = document.querySelector('#tbl tbody');
+var jsonOut = document.getElementById('json');
+
+function waitLoad(){
+  return new Promise(function(res){
+    var done = false;
+    function go(){ if(done) return; done = true; f.removeEventListener('load', go); res(); }
+    f.addEventListener('load', go);
+  });
+}
+function doc(){ return f.contentDocument; }
+function q(sel){ return doc().querySelector(sel); }
+function click(sel){
+  var el = q(sel);
+  if(!el){ throw new Error('ボタンが見つからない: ' + sel); }
+  el.click();
+}
+function text(sel){ var el = q(sel); return el ? el.textContent : ''; }
+async function reset(){
+  try{ f.contentWindow.localStorage.setItem('catgame.v1', JSON.stringify({step:'purpose'})); }
+  catch(e){ throw new Error('localStorage: ' + e.message); }
+  var p = waitLoad();
+  f.contentWindow.location.reload();
+  await p;
+}
+async function runCase(c){
+  var res = {genre:c.genre, pattern:c.pattern, ok:false, errors:[]};
+  try{
+    await reset();
+    if(!q('[data-genre="' + c.genre + '"]')){ throw new Error('ジャンルカードがない'); }
+    click('[data-genre="' + c.genre + '"]');
+    click('[data-pick="action"][data-id="' + c.action + '"]');
+    click('[data-variant="0"]');
+    click('[data-go="cons"]');
+    for(var pi=0; pi<(c.pages||1); pi++){ click('[data-packpage]'); }
+    click('[data-pack="' + c.pack + '"]');
+    click('[data-go="check"]');
+    if(q('[data-emsok]')){ click('[data-emsok]'); }
+    res.verdict = text('.verdict').trim();
+    res.reason = text('.reason').trim();
+    if(!q('[data-go="plan"]')){ throw new Error('ゲーム案へ進めない'); }
+    click('[data-go="plan"]');
+    res.plan = (q('.oneline') ? q('.oneline').textContent : '').trim();
+    click('[data-go="out"]');
+    click('[data-tab="web"]');
+    res.web = text('pre.out');
+    click('[data-tab="unity"]');
+    res.unity = text('pre.out');
+    res.webLen = res.web.length;
+    res.unityLen = res.unity.length;
+    res.checks = {
+      systemDetail: res.web.indexOf('【システム詳細（作り方の型:') >= 0,
+      scene: res.web.indexOf(c.scene) >= 0,
+      kit: res.web.indexOf(c.kit) >= 0,
+      unityScene: res.unity.indexOf(c.scene) >= 0,
+      unityKit: res.unity.indexOf(c.kit) >= 0,
+      noBad: !/undefined|NaN/.test(res.web) && !/undefined|NaN/.test(res.unity),
+      verdictOk: res.verdict.length > 0
+    };
+    res.ok = Object.keys(res.checks).every(function(k){ return res.checks[k]; });
+    if(!res.ok){ res.errors.push('チェック失敗: ' + JSON.stringify(res.checks)); }
+  }catch(e){ res.errors.push(e.message); }
+  return res;
+}
+function row(r, c){
+  var tr = document.createElement('tr');
+  var cells = [
+    c.genre.replace('gh_kit_', ''),
+    r.verdict || '-',
+    (r.webLen || 0) + '字',
+    (r.unityLen || 0) + '字',
+    r.checks && r.checks.unityScene ? 'OK' : 'NG',
+    r.checks && r.checks.unityKit ? 'OK' : 'NG',
+    r.ok ? '<span class="p">PASS</span>' : '<span class="f">FAIL</span>'
+  ];
+  cells.forEach(function(v, i){
+    var td = document.createElement('td');
+    td.innerHTML = v;
+    if(i === 6 && !r.ok && r.errors.length){ td.title = r.errors.join(' / '); }
+    tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+}
+(async function(){
+  var results = [];
+  for(var i=0;i<cases.length;i++){
+    sum.textContent = 'RUNNING ' + (i+1) + '/' + cases.length + ' — ' + cases[i].genre;
+    results.push(await runCase(cases[i]));
+    row(results[i], cases[i]);
+  }
+  var pass = results.filter(function(r){ return r.ok; }).length;
+  sum.textContent = (pass === results.length ? 'ALL PASS' : 'FAILあり') + ' — PASS ' + pass + ' / FAIL ' + (results.length-pass) + '（5仕かけ）';
+  jsonOut.textContent = JSON.stringify(results);
+  window.__REHEARSAL__ = results;
+})();
+})();
+</script>
+</body>
+</html>

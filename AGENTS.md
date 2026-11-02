@@ -29,14 +29,16 @@ EMS(Ends and Means Structure／手段目的構造)を高校生が自分の手で
 - 判定: EMS3色(あまい/むり/ちょうどよい)+ゲーム性チェック4軸(ユニークさ/ひねり/おかしさ/共感)+EMS推測確認(「あってる?」→[合っている]/[違う→未決画面へ])
 - 型ライブラリ(patterns.js): 猫の目的グループ15型(pg_*)＋Unityキット5型(pt_*)を実装。本番制限版は CT.LIMITED でUnityキット5型だけをジャンルカードに出す。検証は tools/pattern_check.html
 - しばりおすすめ: 32案(8ページ巡回)・文言は選んだ苦手から自動生成
-- 検証: node ハーネス+tools/(judge_check.html・cat_draw_check.html)。変更後は必ず回す
+- 本番リハーサル: tools/rehearsal_check.html で制限版5仕かけを目的→出力まで通し、5/5 PASS。Unity依頼は型ごとのシーン/キットを明記(pt_escape は SC_Base_Vertical)
+- 検証: tools/(judge_check.html・cat_draw_check.html・pattern_check.html・rehearsal_check.html)。変更後は必ず回す
 
 ## 次のタスク候補(2026-11-02 更新)
 
 - 完了: 型ライブラリの拡張(猫の目的グループ15型＋Unityキット5型、ジャンルカード16枚、tools/pattern_check.html)
 - 完了: `limited` ブランチの本番制限版(CT.LIMITED でUnityキット5型に制限。コードは main と共通)
+- 完了: 本番リハーサル(制限版の5仕かけで目的→出力まで通し、tools/rehearsal_check.html で5/5 PASS)
 1. 生成テストの2往復目(水位グラデーション・被弾点滅の強化)
-2. 本番リハーサル(制限版の5仕かけで、目的→手段→しばり→点検→出力→Webプロトまで通す)
+2. 本番前の最終確認(教室PC・プロジェクター・音声・localStorage・5仕かけの実操作)
 
 ## ブランチ
 
