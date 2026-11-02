@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>型ライブラリ検証 — CATGame_GEN</title>
+<style>
+body{font-family:monospace;background:#141414;color:#eee;padding:16px;line-height:1.6}
+h1{font-size:16px;margin:0 0 8px}
+#sum{font-size:20px;font-weight:bold;margin:8px 0}
+#out{white-space:pre-wrap;font-size:12px}
+.p{color:#7bd88f}.f{color:#ff7b7b}
+</style>
+</head>
+<body>
+<h1>型ライブラリ検証（patterns.js）</h1>
+<div id="sum">RUNNING</div>
+<pre id="out"></pre>
+<script src="../assets/v1/data.js"></script>
+<script src="../assets/v1/engine_code.js"></script>
+<script src="../assets/v1/catart.js"></script>
+<script src="../assets/v1/patterns.js"></script>
+<script src="../assets/v1/prompts.js"></script>
+<script>
+(function(){
+'use strict';
+var lines = [], pass = 0, fail = 0;
+function ok(name, cond, note){
+  if(cond){ pass++; lines.push('PASS ' + name + (note ? ' — ' + note : '')); }
+  else { fail++; lines.push('FAIL ' + name + (note ? ' — ' + note : '')); }
+}
+function hasText(v){ return typeof v === 'string' && v.replace(/\s/g, '').length > 0; }
+
+var ids = Object.keys(CT.PATTERNS || {});
+var pg = ids.filter(function(id){ return id.indexOf('pg_') === 0; });
+var pt = ids.filter(function(id){ return id.indexOf('pt_') === 0; });
+var groups = CT.PURPOSE_GROUPS || [];
+var missingGroups = groups.filter(function(g){ return !CT.PATTERNS[g.id]; });
+var unknownPg = pg.filter(function(id){ return !groups.some(function(g){ return g.id === id; }); });
+
+ok('型の総数', ids.length === 20, ids.length + '件（pg_' + pg.length + ' / pt_' + pt.length + '）');
+ok('猫の目的グループ15種をすべてカバー', missingGroups.length === 0,
+   (groups.length - missingGroups.length) + '/' + groups.length + 'グループ');
+ok('pg_ の型が目的グループと1対1', unknownPg.length === 0, unknownPg.join(',') || '不一致なし');
+
+var labels = {};
+ids.forEach(function(id){
+  var p = CT.PATTERNS[id];
+  ok('必須項目 ' + id,
+     p && p.id === id && hasText(p.label) && hasText(p.brief) && hasText(p.lever) &&
+     typeof p.dur === 'number' && isFinite(p.dur) && p.dur > 0 &&
+     typeof p.detail === 'function',
+     p ? (p.label + ' / ' + p.dur + '秒') : 'missing');
+  if(p && p.label){ labels[p.label] = (labels[p.label] || 0) + 1; }
+});
+var dupLabels = Object.keys(labels).filter(function(k){ return labels[k] > 1; });
+ok('型の名前が重複しない', dupLabels.length === 0, dupLabels.join(',') || '重複なし');
+
+var hints = CT.GENRE_HINTS || [];
+var purposes = (CT.PURPOSES || []).concat(CT.PURPOSES_HUMAN || []);
+var hintProblems = [];
+var hintIds = {};
+hints.forEach(function(h){
+  if(!h || !h.id || !h.label || !h.desc){ hintProblems.push('項目不足'); return; }
+  if(hintIds[h.id]){ hintProblems.push('id重複:' + h.id); }
+  hintIds[h.id] = true;
+  if(!h.set || !h.set.purpose || !h.set.pattern){ hintProblems.push(h.id + ' の set が不足'); return; }
+  if(!purposes.some(function(p){ return p.id === h.set.purpose; })){
+    hintProblems.push(h.id + ' の目的IDが無い:' + h.set.purpose);
+  }
+  if(!CT.PATTERNS[h.set.pattern]){
+    hintProblems.push(h.id + ' の型IDが無い:' + h.set.pattern);
+  }
+});
+ok('ジャンルカードの参照切れなし', hintProblems.length === 0,
+   hintProblems.length ? hintProblems.join(' / ') : hints.length + '枚');
+
+var hintPatterns = {};
+hints.forEach(function(h){ if(h && h.set && h.set.pattern){ hintPatterns[h.set.pattern] = true; } });
+var uncoveredPg = pg.filter(function(id){ return !hintPatterns[id]; });
+ok('すべての pg_ 型がジャンルカードから選べる', uncoveredPg.length === 0,
+   uncoveredPg.length ? uncoveredPg.join(',') : pg.length + '/' + pg.length + '型');
+
+var consIds = ['c_time','c_count','c_space','c_phys','c_info'];
+function plan(cons){
+  return {
+    centerVerb:'足場を選んで跳ぶ',
+    subVerb:'フクレて追い払う',
+    purpose:{id:'p_climb_tower', goal:'一番高いところに立つ'},
+    cons:(cons || []).map(function(id){ return {def:{id:id}, num:30}; }),
+    obstacles:['掃除機','水','犬'],
+    dur:45
+  };
+}
+var plans = [plan([]), {}, plan(consIds)];
+ids.forEach(function(id){
+  var p = CT.PATTERNS[id];
+  var problems = [];
+  plans.forEach(function(P, i){
+    var a, b;
+    try{ a = p.detail(P); b = p.detail(P); }
+    catch(e){ problems.push('[' + i + '] 例外: ' + e.message); return; }
+    if(typeof a !== 'string' || !a.trim()){ problems.push('[' + i + '] 空の出力'); return; }
+    if(a !== b){ problems.push('[' + i + '] 同じ入力で出力が違う'); }
+    if(/undefined|NaN|null/.test(a)){ problems.push('[' + i + '] 禁止語が出た'); }
+    if(/\n\s*\n/.test(a)){ problems.push('[' + i + '] 空行が出た'); }
+    if(a.indexOf('▼ レベル構造:') < 0){ problems.push('[' + i + '] 見出しがない'); }
+    if(a.indexOf('・調整レバー:') < 0){ problems.push('[' + i + '] 調整レバーがない'); }
+    if(i === 2 && a.indexOf('足場を選んで跳ぶ') < 0){ problems.push('[2] 中心アクションが出力にない'); }
+  });
+  ok('詳細生成 ' + id + '（' + (p.label || '?') + '）3通り×2回', problems.length === 0,
+     problems.length ? problems.join(' / ') : '出力OK');
+});
+
+var sample = CT.PATTERNS.pg_climb ? CT.PATTERNS.pg_climb.detail(plan(consIds)) : '';
+ok('サンプル出力の文字数', sample.length > 120, sample.length + '文字');
+
+var stBase = {
+  purpose:'p_climb_tower', action:'a_climb', variant:0,
+  cons:[{id:'c_time',num:40},{id:'c_phys',num:2}],
+  profile:{good:['good_climb'], bad:['bad_vacuum','bad_water'], feat:['feat_box'], target:['tg_cute']},
+  subject:'sub_cat', dur:40
+};
+var webOk = 0;
+ids.forEach(function(id){
+  var st = JSON.parse(JSON.stringify(stBase));
+  st.pattern = id;
+  var out, p = CT.PATTERNS[id], problems = [];
+  try{ out = CT.buildAll(st, null, []); }
+  catch(e){ ok('出力統合 ' + id, false, '例外: ' + e.message); return; }
+  ['plan','image','assets','web','unity','proposal'].forEach(function(k){
+    var v = out[k];
+    if(typeof v !== 'string' || !v.trim()){ problems.push(k + ' が空'); }
+    else if(/undefined|NaN/.test(v)){ problems.push(k + ' に禁止語'); }
+  });
+  if(out.web.indexOf('【システム詳細（作り方の型: ' + p.label + '）】') < 0){
+    problems.push('web に型名がない');
+  }
+  ok('出力統合 ' + id + '（6種）', problems.length === 0,
+     problems.length ? problems.join(' / ') : '6種とも出力OK');
+  if(problems.length === 0){ webOk++; }
+});
+ok('出力できた型の数', webOk === ids.length, webOk + '/' + ids.length);
+
+document.getElementById('sum').textContent = (fail === 0 ? 'ALL PASS' : 'FAILあり') +
+  ' — PASS ' + pass + ' / FAIL ' + fail + '（型 ' + ids.length + '件）';
+document.getElementById('out').textContent = lines.join('\n');
+window.__PATTERN_CHECK__ = {pass:pass, fail:fail, total:ids.length, lines:lines};
+})();
+</script>
+</body>
+</html>

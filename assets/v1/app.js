@@ -181,6 +181,8 @@ nav('intro', 'purpose')
 R.purpose = () => {
   const human = state.subject==='sub_human';
   const groups = human ? CT.PURPOSE_GROUPS_HUMAN : CT.PURPOSE_GROUPS;
+  const hintMain = CT.GENRE_HINTS.slice(0, 5);
+  const hintMore = CT.GENRE_HINTS.slice(5);
   return [
 '<section class="card"><div class="eyebrow">STEP 02 / ねらい（目的・E）</div>',
 '<h2 class="step">作りたいゲームはどれ？</h2>',
@@ -191,7 +193,8 @@ groups.map(g=>'<div class="lbl">'+esc(g.label)+'</div>' + chips(g.items, 'purpos
 '<div class="lbl">その他（ここに書けば、それが目的になります）</div>',
 '<input type="text" data-purposeother placeholder="自由に書く（例: ネコがケーキを守る）" value="'+esc(state.purposeOther||'')+'">',
 '<div class="lbl">こんなジャンルも考えられます（行き詰まったら・押すと EMS の入り口へ飛びます）</div>',
-'<div class="chips">' + CT.GENRE_HINTS.map(h=>'<button type="button" class="chip small" data-genre="'+h.id+'">'+esc(h.label)+'：'+esc(h.desc)+'</button>').join('') + '</div>',
+'<div class="chips">' + hintMain.map(h=>'<button type="button" class="chip small" data-genre="'+h.id+'">'+esc(h.label)+'：'+esc(h.desc)+'</button>').join('') + '</div>',
+(hintMore.length ? '<details class="genre-more"><summary>ほかのジャンルも見る（'+hintMore.length+'枚）</summary><div class="chips">' + hintMore.map(h=>'<button type="button" class="chip small" data-genre="'+h.id+'">'+esc(h.label)+'：'+esc(h.desc)+'</button>').join('') + '</div></details>' : ''),
 ''+
 '<div class="lbl">' + esc(CT.PERSONA_LABEL) + '</div>',
 '<div class="cons-row"><input type="text" data-persona-a placeholder="◯◯したい" value="'+esc((state.persona||'').split('のに')[0]||'')+'"><span class="unit">のに</span></div>',

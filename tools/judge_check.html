@@ -32,7 +32,7 @@ log('相性表='+fitCells+'セル（行動×制約型）');
 
 log('');
 log('== 2. 参照切れ検査 ==');
-var actIds=CT.ACTIONS.map(function(a){return a.id;}), conIds=CT.CONSTRAINTS.map(function(c){return c.id;}), broken=0;
+var actIds=CT.ACTIONS.concat(CT.HUMAN_ACTIONS||[]).map(function(a){return a.id;}), conIds=CT.CONSTRAINTS.map(function(c){return c.id;}), broken=0;
 Object.keys(CT.FIT).forEach(function(a){ if(actIds.indexOf(a)<0){ log('NG 迷子の行 '+a); broken++; }
   Object.keys(CT.FIT[a]).forEach(function(c){ if(conIds.indexOf(c)<0){ log('NG 迷子の列 '+c); broken++; } }); });
 actIds.forEach(function(a){ if(!CT.FIT[a]){ log('NG 相性表に行がない '+a); broken++; } else{ conIds.forEach(function(c){ if(!CT.FIT[a][c]){ log('NG セル欠け '+a+'/'+c); broken++; } }); } });

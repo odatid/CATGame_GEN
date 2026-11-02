@@ -40,6 +40,10 @@ p.lead{margin:0 0 14px;color:var(--sub);font-size:.9rem}
 .chip:hover{border-color:var(--accent)}
 .chip.on{background:var(--accent);border-color:var(--accent);color:#1a1208;font-weight:700}
 .chip.small{padding:4px 10px;font-size:.76rem}
+.genre-more{margin-top:8px}
+.genre-more summary{cursor:pointer;color:var(--sub);font-size:.8rem;padding:5px 0;width:max-content}
+.genre-more summary:hover{color:var(--accent2)}
+.genre-more[open] summary{margin-bottom:8px}
 .lbl{margin:16px 0 8px;font-size:.85rem;color:var(--accent2);font-weight:700}
 .lbl:first-child{margin-top:0}
 input[type=text],input[type=number]{background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--ink);

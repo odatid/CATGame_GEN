@@ -462,7 +462,18 @@ CT.GENRE_HINTS = [
   {id:'gh_actpuzzle', label:'アクションパズル', desc:'落ちてくる物を置きながら解く。考える＋間に合う（スイカゲーム系）', set:{purpose:'p_ap_drop', pattern:'pg_actpuzzle'}},
   {id:'gh_puzzact',   label:'パズルアクション', desc:'床や敵が動く中で、仕かけを解きながら進む', set:{purpose:'p_pa_switch', pattern:'pg_puzzact'}},
   {id:'gh_roguelike', label:'ローグライク',     desc:'1回の挑戦で登り切る。失敗したら最初から。シビアに楽しむ', set:{purpose:'p_rl_run', pattern:'pg_rogue'}},
-  {id:'gh_roguelite', label:'ローグライト',     desc:'失敗しても少しずつ楽になる。挑戦のたびに先へ進む', set:{purpose:'p_rlt_run', pattern:'pg_rogue'}}
+  {id:'gh_roguelite', label:'ローグライト',     desc:'失敗しても少しずつ楽になる。挑戦のたびに先へ進む', set:{purpose:'p_rlt_run', pattern:'pg_rogue'}},
+  {id:'gh_run',       label:'走って逃げる',     desc:'迫るものから逃げ、ゴールまで走り切る。水位が上がる逃げ切りもここ', set:{purpose:'p_run_out', pattern:'pg_run'}},
+  {id:'gh_climb',     label:'高い所に登る',     desc:'足場を選んで上へ。落ちても戻れるので、登る練習に向く', set:{purpose:'p_climb_tower', pattern:'pg_climb'}},
+  {id:'gh_jump',      label:'跳んで渡る',       desc:'切れ目や動く足場を、タイミングよく跳んで渡る', set:{purpose:'p_jump_gap', pattern:'pg_jump'}},
+  {id:'gh_hide',      label:'見つからずに進む', desc:'見張りの視線をよけ、隠れ場所から隠れ場所へ移る', set:{purpose:'p_hide_dinner', pattern:'pg_hide'}},
+  {id:'gh_collect',   label:'集めて運ぶ',       desc:'散らばった物を集め、必要な数だけゴールへ運ぶ', set:{purpose:'p_collect_can', pattern:'pg_collect'}},
+  {id:'gh_ambush',    label:'待って飛び出す',   desc:'獲物が来るまで待ち、一瞬の窓で飛び出す', set:{purpose:'p_amb_mouse', pattern:'pg_ambush'}},
+  {id:'gh_chaos',     label:'ひっくり返す',     desc:'机の上の物を落として、部屋をカオスにする', set:{purpose:'p_chaos_desk', pattern:'pg_chaos'}},
+  {id:'gh_care',      label:'癒して眠らせる',   desc:'そばにいてストレスを下げ、飼い主を眠らせる', set:{purpose:'p_care_lap', pattern:'pg_care'}},
+  {id:'gh_battle',    label:'追い払う',         desc:'近づく敵を威嚇で押し戻し、部屋を守る', set:{purpose:'p_bat_vacuum', pattern:'pg_battle'}},
+  {id:'gh_balance',   label:'落とさず運ぶ',     desc:'細い道を、物を落とさないように運ぶ', set:{purpose:'p_bal_carry', pattern:'pg_balance'}},
+  {id:'gh_water',     label:'水をよける',       desc:'水たまり・雨・しぶきを避けて進む（上昇する水ではない）', set:{purpose:'p_wat_puddle', pattern:'pg_water'}}
 ];
 CT.inferEMS = function(st){
   st = st || {};
@@ -500,4 +511,4 @@ CT.inferEMS = function(st){
   ].join('／');
   return {ok: missing.length === 0, missing: missing, sentence: sentence};
 };
-CT.VERSION = {tag:'しばり32案版 v1.0.0', date:'2026-11-02'};
+CT.VERSION = {tag:'型ライブラリ拡張版 v1.1.0', date:'2026-11-02'};
