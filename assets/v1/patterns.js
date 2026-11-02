@@ -105,6 +105,102 @@ CT.PATTERNS = {
     }
   }
 
+  ,pt_moveplat: {
+    id:'pt_moveplat', label:'うごく床型',
+    brief:'うごく床型：動く足場を渡って進む（Moving Platform・Elevator・Falling・Spring）',
+    lever:'GameSettings → Move Speed / Enemy Speed（Slow・Normal・Fast）',
+    dur: 45,
+    unity:{scene:'SC_Base_Side', kit:['Moving Platform','Elevator Platform','Falling Platform','Spring Platform','Goal']},
+    detail: function(P){
+      const L=[];
+      L.push('▼ レベル構造: うごく床型（Unity: Moving Platform 系）');
+      L.push('・この日に使う仕かけ（Unityキット）: Moving Platform / Elevator Platform / Falling Platform / Spring Platform / Goal');
+      L.push('・シーン: SC_Base_Side');
+      L.push('・シーンは SC_Base_Side（横）を想定。動く床が3〜5枚あり、それぞれ動き方が違う（左右・上下・乗ると落ちる・乗ると高く跳ぶ）。');
+      L.push('・床の動きは往復（行って戻る）。プレイヤーは「いつ乗るか」をはかる。');
+      if(P && P.centerVerb){ L.push('・中心アクション「'+P.centerVerb+'」: 動く床への乗り移りのタイミングに使う。'); }
+      if(P && P.purpose){ L.push('・ゴール: '+P.purpose.goal+'（Goal Prefab を終点に置く）。'); }
+      L.push('・調整レバー: '+this.lever+'（ゲーム性チェックの点検後に最初に動かす場所）');
+      return L.join('\n');
+    }
+  },
+  pt_collect: {
+    id:'pt_collect', label:'あつめる型',
+    brief:'あつめる型：散らばった物をぜんぶ集めてゴールへ（Collectible・Goal）',
+    lever:'GameSettings → Required Item Count / Game Time',
+    dur: 45,
+    unity:{scene:'SC_Base_Top', kit:['Collectible','Goal','Timer','Patrol Enemy']},
+    detail: function(P){
+      const L=[];
+      L.push('▼ レベル構造: あつめる型（Unity: Collectible 系）');
+      L.push('・この日に使う仕かけ（Unityキット）: Collectible / Goal / Timer / Required Item Count');
+      L.push('・シーン: SC_Base_Top');
+      L.push('・シーンは SC_Base_Top（俯瞰）を想定。集める物（猫缶・魚・毛糸）を部屋の隅と袋小路に配置する。');
+      L.push('・全部集むと Goal が開く（Required Item Count と連動）。遠い場所の物ほど価値が高い（得点を上乗せ）。');
+      if(P && P.centerVerb){ L.push('・中心アクション「'+P.centerVerb+'」: 移動しながら取る操作に使う。'); }
+      if(P && P.purpose){ L.push('・ゴール: '+P.purpose.goal+'。'); }
+      L.push('・調整レバー: '+this.lever);
+      return L.join('\n');
+    }
+  },
+  pt_hide: {
+    id:'pt_hide', label:'かくれる型',
+    brief:'かくれる型：隠れながら目的を遂げる（Hide Object・Patrol Enemy・音ゲージ）',
+    lever:'GameSettings → Enemy Speed / Game Time',
+    dur: 45,
+    unity:{scene:'SC_Base_Top', kit:['Hide Object','Patrol Enemy','Collectible','Goal']},
+    detail: function(P){
+      const L=[];
+      L.push('▼ レベル構造: かくれる型（Unity: Hide Object 系）');
+      L.push('・この日に使う仕かけ（Unityキット）: Hide Object / Patrol Enemy / Goal');
+      L.push('・シーン: SC_Base_Top');
+      L.push('・巡回する敵（Patrol Enemy）の視線を抜けて、隠れ場所（Hide Object）に中継しながら進む。');
+      L.push('・音ゲージ制約と組み合わせる: 走ると音が上がり、隠れると下がる。敵に見つかるとミス。');
+      if(P && P.centerVerb){ L.push('・中心アクション「'+P.centerVerb+'」: 隠れ場所から次へ移る判断に使う。'); }
+      if(P && P.purpose){ L.push('・ゴール: '+P.purpose.goal+'。'); }
+      L.push('・調整レバー: '+this.lever);
+      return L.join('\n');
+    }
+  },
+  pt_switch: {
+    id:'pt_switch', label:'しかけ解き型',
+    brief:'しかけ解き型：スイッチと押し箱で道を開ける（Switch・Push Box・Switch Gate）',
+    lever:'GameSettings → Game Time（解く時間）/ Move Speed',
+    dur: 45,
+    unity:{scene:'SC_Base_Top', kit:['Switch','Switch Gate','Push Box','Pressure Switch','Goal']},
+    detail: function(P){
+      const L=[];
+      L.push('▼ レベル構造: しかけ解き型（Unity: Switch 系）');
+      L.push('・この日に使う仕かけ（Unityキット）: Switch / Switch Gate / Push Box / Pressure Switch / Goal');
+      L.push('・シーン: SC_Base_Top');
+      L.push('・「解く→道が開く→進む」を1セットにして3回繰り返す。押し箱は重し（Pressure Switch）にも足場にもなる。');
+      L.push('・スイッチを押す順番に正解がある（看板 Sign Board にヒントを出してよい）。');
+      if(P && P.centerVerb){ L.push('・中心アクション「'+P.centerVerb+'」: 箱を押す・乗る操作に使う。'); }
+      if(P && P.purpose){ L.push('・ゴール: '+P.purpose.goal+'（Switch Gate の向こう）。'); }
+      L.push('・調整レバー: '+this.lever);
+      return L.join('\n');
+    }
+  },
+  pt_escape: {
+    id:'pt_escape', label:'だっしゅつ型',
+    brief:'だっしゅつ型：迫る危険から高所・出口へ（Timer・Hazard Area）',
+    lever:'GameSettings → Game Time / Enemy Speed',
+    dur: 45,
+    unity:{scene:'SC_Base_Vertical', kit:['Hazard Area','Timer','Moving Platform','Goal']},
+    detail: function(P){
+      const L=[];
+      L.push('▼ レベル構造: だっしゅつ型（Unity: Hazard Area + Timer 系）');
+      L.push('・この日に使う仕かけ（Unityキット）: Hazard Area / Timer / Moving Platform / Goal');
+      L.push('・シーン: SC_Base_Vertical');
+      L.push('・危険エリア（Hazard Area＝水・煙など）が下からじわじわ迫る（Timer と連動して一定速度で上昇）。触れるとミス。');
+      L.push('・縦長マップ（SC_Base_Vertical 想定）。最下層の安全高台から開始する（開始直後の被弾の理不尽をなくす）。');
+      if(P && P.centerVerb){ L.push('・中心アクション「'+P.centerVerb+'」: 高く登る・逃げる操作に使う。'); }
+      if(P && P.purpose){ L.push('・ゴール: '+P.purpose.goal+'。'); }
+      L.push('・調整レバー: '+this.lever+'（危険の迫る速さ）');
+      return L.join('\n');
+    }
+  }
+
 };
 
 CT.patternOf = function(id){
