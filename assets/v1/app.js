@@ -52,6 +52,11 @@ function load(){
       if(typeof state.emsConfirmed!=='boolean') state.emsConfirmed = false;
       if(typeof state.genreHint!=='string') state.genreHint = '';
       if(typeof state.pattern!=='string') state.pattern = '';
+      /* 制限版では、保存データに残った制限外の型を使わない */
+      if(CT.LIMITED && Array.isArray(CT.LIMITED.types) && state.pattern
+         && CT.LIMITED.types.indexOf(state.pattern)<0){
+        state.pattern = ''; state.genreHint = '';
+      }
       if(!Array.isArray(state.cons)) state.cons = [];
       state.cons = state.cons.filter(function(c){ return c && typeof c.id==='string'; });
       if(!state.roles || typeof state.roles!=='object') state.roles = f.roles;
@@ -183,18 +188,23 @@ R.purpose = () => {
   const groups = human ? CT.PURPOSE_GROUPS_HUMAN : CT.PURPOSE_GROUPS;
   const hintMain = CT.GENRE_HINTS.slice(0, 5);
   const hintMore = CT.GENRE_HINTS.slice(5);
+  const genreHtml = [
+    (CT.LIMITED && CT.LIMITED.note ? '<p class="limited-note">'+esc(CT.LIMITED.note)+'</p>' : ''),
+    '<div class="lbl">' + (CT.LIMITED ? 'この日作れるゲームの型（この中から選ぶ）' : 'こんなジャンルも考えられます（行き詰まったら・押すと EMS の入り口へ飛びます）') + '</div>',
+    '<div class="chips">' + hintMain.map(h=>'<button type="button" class="chip small" data-genre="'+h.id+'">'+esc(h.label)+'：'+esc(h.desc)+'</button>').join('') + '</div>',
+    (hintMore.length ? '<details class="genre-more"><summary>ほかのジャンルも見る（'+hintMore.length+'枚）</summary><div class="chips">' + hintMore.map(h=>'<button type="button" class="chip small" data-genre="'+h.id+'">'+esc(h.label)+'：'+esc(h.desc)+'</button>').join('') + '</div></details>' : '')
+  ].join('');
   return [
 '<section class="card"><div class="eyebrow">STEP 02 / ねらい（目的・E）</div>',
 '<h2 class="step">作りたいゲームはどれ？</h2>',
 '<div class="lbl">誰を操作する？（グループの案の中心に寄せる・切り替えると選び直しになります）</div>',
 '<div class="chips">' + CT.SUBJECTS.map(s=>'<button type="button" class="chip'+((human?(s.id==='sub_human'):(s.id==='sub_cat'))?' on':'')+'" data-subject="'+s.id+'">'+esc(s.label)+'</button>').join('') + '</div>',
 '<p class="lead">ここで作りたいゲームを決めます。漠然としているときは、この中から選べば企画になります。カテゴリごとに並んでいます。</p>',
+(CT.LIMITED ? genreHtml : ''),
 groups.map(g=>'<div class="lbl">'+esc(g.label)+'</div>' + chips(g.items, 'purpose', false)).join(''),
 '<div class="lbl">その他（ここに書けば、それが目的になります）</div>',
 '<input type="text" data-purposeother placeholder="自由に書く（例: ネコがケーキを守る）" value="'+esc(state.purposeOther||'')+'">',
-'<div class="lbl">こんなジャンルも考えられます（行き詰まったら・押すと EMS の入り口へ飛びます）</div>',
-'<div class="chips">' + hintMain.map(h=>'<button type="button" class="chip small" data-genre="'+h.id+'">'+esc(h.label)+'：'+esc(h.desc)+'</button>').join('') + '</div>',
-(hintMore.length ? '<details class="genre-more"><summary>ほかのジャンルも見る（'+hintMore.length+'枚）</summary><div class="chips">' + hintMore.map(h=>'<button type="button" class="chip small" data-genre="'+h.id+'">'+esc(h.label)+'：'+esc(h.desc)+'</button>').join('') + '</div></details>' : ''),
+(CT.LIMITED ? '' : genreHtml),
 ''+
 '<div class="lbl">' + esc(CT.PERSONA_LABEL) + '</div>',
 '<div class="cons-row"><input type="text" data-persona-a placeholder="◯◯したい" value="'+esc((state.persona||'').split('のに')[0]||'')+'"><span class="unit">のに</span></div>',

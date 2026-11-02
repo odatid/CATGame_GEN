@@ -76,9 +76,28 @@ ok('ジャンルカードの参照切れなし', hintProblems.length === 0,
 
 var hintPatterns = {};
 hints.forEach(function(h){ if(h && h.set && h.set.pattern){ hintPatterns[h.set.pattern] = true; } });
-var uncoveredPg = pg.filter(function(id){ return !hintPatterns[id]; });
-ok('すべての pg_ 型がジャンルカードから選べる', uncoveredPg.length === 0,
-   uncoveredPg.length ? uncoveredPg.join(',') : pg.length + '/' + pg.length + '型');
+if(CT.LIMITED && CT.LIMITED.mode){
+  var allowed = Array.isArray(CT.LIMITED.types) ? CT.LIMITED.types : [];
+  var hinted = hints.map(function(h){ return h.set.pattern; });
+  var missingAllowed = allowed.filter(function(id){ return hinted.indexOf(id) < 0; });
+  var extraAllowed = hinted.filter(function(id){ return allowed.indexOf(id) < 0; });
+  var unknownAllowed = allowed.filter(function(id){ return !CT.PATTERNS[id]; });
+  ok('制限版の許可型が実在する', unknownAllowed.length === 0,
+     unknownAllowed.length ? unknownAllowed.join(',') : allowed.length + '型');
+  ok('制限版はUnityキット型だけ', allowed.every(function(id){ return id.indexOf('pt_') === 0; }),
+     allowed.join(','));
+  ok('制限版の型がすべてカードにある', missingAllowed.length === 0,
+     missingAllowed.length ? missingAllowed.join(',') : allowed.length + '/' + allowed.length + '型');
+  ok('制限版のカードに制限外の型がない', extraAllowed.length === 0,
+     extraAllowed.length ? extraAllowed.join(',') : '制限外なし');
+  ok('制限版のカード枚数', hints.length === allowed.length,
+     hints.length + '枚 / 許可' + allowed.length + '型');
+  ok('制限版の注意書き', hasText(CT.LIMITED.note), CT.LIMITED.note || '未記入');
+} else {
+  var uncoveredPg = pg.filter(function(id){ return !hintPatterns[id]; });
+  ok('すべての pg_ 型がジャンルカードから選べる', uncoveredPg.length === 0,
+     uncoveredPg.length ? uncoveredPg.join(',') : pg.length + '/' + pg.length + '型');
+}
 
 var consIds = ['c_time','c_count','c_space','c_phys','c_info'];
 function plan(cons){

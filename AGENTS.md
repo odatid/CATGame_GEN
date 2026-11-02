@@ -24,18 +24,19 @@ EMS(Ends and Means Structure／手段目的構造)を高校生が自分の手で
 
 ## 現在の状態(2026-11-02 時点)
 
-- 版: **型ライブラリ拡張版 v1.1.0**(assets/v1/: data.js/judge.js/engine_code.js/catart.js/patterns.js/prompts.js/app.js/style.css)
+- 版: **本番制限版 v1.1.0**(assets/v1/: data.js/judge.js/engine_code.js/catart.js/patterns.js/prompts.js/app.js/style.css)
 - 画面: 9ステップ+常設役割バー。ネコ操作/人操作の2モード(目的40+17種・行動11+8種)
 - 判定: EMS3色(あまい/むり/ちょうどよい)+ゲーム性チェック4軸(ユニークさ/ひねり/おかしさ/共感)+EMS推測確認(「あってる?」→[合っている]/[違う→未決画面へ])
-- 型ライブラリ(patterns.js): 猫の目的グループ15型(pg_*)＋Unityキット5型(pt_*)を実装。ジャンルカード16枚から選択できる。検証は tools/pattern_check.html
+- 型ライブラリ(patterns.js): 猫の目的グループ15型(pg_*)＋Unityキット5型(pt_*)を実装。本番制限版は CT.LIMITED でUnityキット5型だけをジャンルカードに出す。検証は tools/pattern_check.html
 - しばりおすすめ: 32案(8ページ巡回)・文言は選んだ苦手から自動生成
 - 検証: node ハーネス+tools/(judge_check.html・cat_draw_check.html)。変更後は必ず回す
 
 ## 次のタスク候補(2026-11-02 更新)
 
 - 完了: 型ライブラリの拡張(猫の目的グループ15型＋Unityキット5型、ジャンルカード16枚、tools/pattern_check.html)
-1. `limited` ブランチで本番制限版(CT.LIMITED フラグで型・選択肢を絞る。コードは共通)
-2. 生成テストの2往復目(水位グラデーション・被弾点滅の強化)
+- 完了: `limited` ブランチの本番制限版(CT.LIMITED でUnityキット5型に制限。コードは main と共通)
+1. 生成テストの2往復目(水位グラデーション・被弾点滅の強化)
+2. 本番リハーサル(制限版の5仕かけで、目的→手段→しばり→点検→出力→Webプロトまで通す)
 
 ## ブランチ
 

@@ -457,23 +457,22 @@ function bgmOf(purposeId){
 CT.stageOf = stageOf;
 CT.bgmOf = bgmOf;
 
+/* ---------------- 本番制限版（limited ブランチ） ----------------
+   この日に作れるゲームを、Unityテンプレートの5つの仕かけに絞る。
+   コードは main と共通で、CT.LIMITED の値だけを変える。
+   types に無い型は、保存データから読み込んでも使わない。
+   ------------------------------------------------------------ */
+CT.LIMITED = {
+  mode:'production',
+  types:['pt_moveplat','pt_collect','pt_hide','pt_switch','pt_escape'],
+  note:'この日に作れるのは、Unityテンプレートにある5つの仕かけだけです。下のカードから選んでください。'
+};
 CT.GENRE_HINTS = [
-  {id:'gh_puzzle',    label:'パズル',           desc:'手番制で考えて解く。動く競争はなし。じっくり考えるグループへ', set:{purpose:'p_pz_slide', pattern:'pg_puzzle'}},
-  {id:'gh_actpuzzle', label:'アクションパズル', desc:'落ちてくる物を置きながら解く。考える＋間に合う（スイカゲーム系）', set:{purpose:'p_ap_drop', pattern:'pg_actpuzzle'}},
-  {id:'gh_puzzact',   label:'パズルアクション', desc:'床や敵が動く中で、仕かけを解きながら進む', set:{purpose:'p_pa_switch', pattern:'pg_puzzact'}},
-  {id:'gh_roguelike', label:'ローグライク',     desc:'1回の挑戦で登り切る。失敗したら最初から。シビアに楽しむ', set:{purpose:'p_rl_run', pattern:'pg_rogue'}},
-  {id:'gh_roguelite', label:'ローグライト',     desc:'失敗しても少しずつ楽になる。挑戦のたびに先へ進む', set:{purpose:'p_rlt_run', pattern:'pg_rogue'}},
-  {id:'gh_run',       label:'走って逃げる',     desc:'迫るものから逃げ、ゴールまで走り切る。水位が上がる逃げ切りもここ', set:{purpose:'p_run_out', pattern:'pg_run'}},
-  {id:'gh_climb',     label:'高い所に登る',     desc:'足場を選んで上へ。落ちても戻れるので、登る練習に向く', set:{purpose:'p_climb_tower', pattern:'pg_climb'}},
-  {id:'gh_jump',      label:'跳んで渡る',       desc:'切れ目や動く足場を、タイミングよく跳んで渡る', set:{purpose:'p_jump_gap', pattern:'pg_jump'}},
-  {id:'gh_hide',      label:'見つからずに進む', desc:'見張りの視線をよけ、隠れ場所から隠れ場所へ移る', set:{purpose:'p_hide_dinner', pattern:'pg_hide'}},
-  {id:'gh_collect',   label:'集めて運ぶ',       desc:'散らばった物を集め、必要な数だけゴールへ運ぶ', set:{purpose:'p_collect_can', pattern:'pg_collect'}},
-  {id:'gh_ambush',    label:'待って飛び出す',   desc:'獲物が来るまで待ち、一瞬の窓で飛び出す', set:{purpose:'p_amb_mouse', pattern:'pg_ambush'}},
-  {id:'gh_chaos',     label:'ひっくり返す',     desc:'机の上の物を落として、部屋をカオスにする', set:{purpose:'p_chaos_desk', pattern:'pg_chaos'}},
-  {id:'gh_care',      label:'癒して眠らせる',   desc:'そばにいてストレスを下げ、飼い主を眠らせる', set:{purpose:'p_care_lap', pattern:'pg_care'}},
-  {id:'gh_battle',    label:'追い払う',         desc:'近づく敵を威嚇で押し戻し、部屋を守る', set:{purpose:'p_bat_vacuum', pattern:'pg_battle'}},
-  {id:'gh_balance',   label:'落とさず運ぶ',     desc:'細い道を、物を落とさないように運ぶ', set:{purpose:'p_bal_carry', pattern:'pg_balance'}},
-  {id:'gh_water',     label:'水をよける',       desc:'水たまり・雨・しぶきを避けて進む（上昇する水ではない）', set:{purpose:'p_wat_puddle', pattern:'pg_water'}}
+  {id:'gh_kit_move',  label:'うごく床で進む',   desc:'動く床を渡ってゴールへ（Unity: Moving Platform 系・横画面）', set:{purpose:'p_climb_tower', pattern:'pt_moveplat'}},
+  {id:'gh_kit_coll',  label:'あつめて届ける',   desc:'猫缶や魚をぜんぶ集める（Unity: Collectible 系・俯瞰画面）', set:{purpose:'p_collect_can', pattern:'pt_collect'}},
+  {id:'gh_kit_hide',  label:'みつからずにやる', desc:'隠れながら巡回をやりすごす（Unity: Hide Object 系・音ゲージ）', set:{purpose:'p_hide_dinner', pattern:'pt_hide'}},
+  {id:'gh_kit_switch',label:'しかけを解く',     desc:'スイッチと押し箱で道を開ける（Unity: Switch 系）', set:{purpose:'p_pz_fridge', pattern:'pt_switch'}},
+  {id:'gh_kit_escape',label:'だっしゅつする',   desc:'迫る危険から高く逃げる（Unity: Hazard Area + Timer）', set:{purpose:'p_run_vac', pattern:'pt_escape'}}
 ];
 CT.inferEMS = function(st){
   st = st || {};
@@ -511,4 +510,4 @@ CT.inferEMS = function(st){
   ].join('／');
   return {ok: missing.length === 0, missing: missing, sentence: sentence};
 };
-CT.VERSION = {tag:'型ライブラリ拡張版 v1.1.0', date:'2026-11-02'};
+CT.VERSION = {tag:'本番制限版 v1.1.0', date:'2026-11-02'};
