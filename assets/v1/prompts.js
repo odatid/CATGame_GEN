@@ -219,7 +219,9 @@ const IRASUTOYA = [
 ].join('\n');
 function promptWeb(P, J){
   const pat = (P.patternId && CT.PATTERNS && CT.PATTERNS[P.patternId]) ? CT.PATTERNS[P.patternId] : null;
-  const patBlock = pat ? ['【システム詳細（作り方の型: ' + pat.label + '）】', pat.detail(P), ''] : [];
+  const patBlock = pat ? ['【システム詳細（作り方の型: ' + pat.label + '）】',
+    (pat.unity ? '・シーン: ' + pat.unity.scene + ' ／ 使う仕かけ（Unityキット）: ' + pat.unity.kit.join(' / ') : null),
+    pat.detail(P), ''].filter(Boolean) : [];
   const stage = CT.stageOf(P.purpose ? P.purpose.id : '');
   const bgm = CT.bgmOf(P.purpose ? P.purpose.id : '');
   const sideView = ['pg_run','pg_climb','pg_balance','pg_battle','hg_find','hg_catch'].some(g=>
