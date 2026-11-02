@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>音声コードの起動検証 — CATGame_GEN</title>
+<style>
+body{font-family:monospace;background:#141414;color:#eee;padding:14px;line-height:1.7}
+h1{font-size:15px;color:#e8873d;margin:0 0 8px}
+#sum{font-size:18px;font-weight:bold;margin:8px 0}
+#out{white-space:pre-wrap;font-size:12px}
+canvas{display:none}
+</style>
+</head>
+<body>
+<h1>音声コードの起動検証（Web Audio・音源ファイルなし）</h1>
+<p style="font-size:.8rem;color:#bdbab2">実際の聴感・音量はこの環境では確認できません。ここでは例外なく初期化・再生要求できるかだけを数えます。</p>
+<div id="sum">RUNNING</div>
+<pre id="out"></pre>
+<canvas id="game" width="960" height="540"></canvas>
+<script src="../assets/v1/data.js"></script>
+<script src="../assets/v1/engine_code.js"></script>
+<script src="../assets/v1/catart.js"></script>
+<script>
+(function(){
+'use strict';
+var lines = [], pass = 0, fail = 0, errors = [];
+function ok(name, cond, note){
+  if(cond){ pass++; lines.push('PASS ' + name + (note ? ' — ' + note : '')); }
+  else { fail++; lines.push('FAIL ' + name + (note ? ' — ' + note : '')); }
+}
+function inject(src){
+  var s = document.createElement('script');
+  s.textContent = src;
+  document.body.appendChild(s);
+}
+window.onerror = function(msg){ errors.push(String(msg)); };
+window.drawCat = CT.drawCat;
+window.drawCatSide = CT.drawCatSide;
+var core = CT.ENGINE.CORE_CODE
+  .split('drawPico').join('drawCat')
+  .split("drawCat(ctx, player.x + swayX(), player.y, 34, pose, player.sx, player.sy, 1)")
+  .join("drawCat(ctx, player.x + swayX(), player.y, 34, pose, player.sx, player.sy, 1, 'shima')");
+inject(core);
+inject(CT.ENGINE.AUDIO_CODE);
+
+setTimeout(function(){
+  ok('音声関数がある', typeof audioInit === 'function' && typeof se === 'function'
+     && typeof audioUpdate === 'function' && typeof audioObserve === 'function',
+     'audioInit / se / audioUpdate / audioObserve');
+  ok('loop を包んでいる', typeof loop === 'function' && typeof loopBase === 'function', 'loop / loopBase');
+  var AC = window.AudioContext || window.webkitAudioContext;
+  ok('AudioContext がある', !!AC, AC ? 'あり' : 'なし（この環境では音を出せない）');
+  if(AC && typeof audioInit === 'function'){
+    try{ audioInit(); ok('初期化で例外なし', true, AB ? ('state=' + AB.state + ' / AOn=' + AOn) : 'AB=null'); }
+    catch(e){ ok('初期化で例外なし', false, e.message); }
+    try{ se('jump'); se('land'); se('score'); se('fail'); ok('SEの再生要求で例外なし', true, '4種'); }
+    catch(e){ ok('SEの再生要求で例外なし', false, e.message); }
+    try{ audioUpdate(); ok('BGMの先読みで例外なし', true, 'audioUpdate()'); }
+    catch(e){ ok('BGMの先読みで例外なし', false, e.message); }
+    try{ startGame(); player.vy = -700; audioObserve(); ok('状態観測で例外なし', true, 'jump検出'); }
+    catch(e){ ok('状態観測で例外なし', false, e.message); }
+    ok('ノイズを乱数で作っていない', CT.ENGINE.AUDIO_CODE.indexOf('Math.random') < 0, 'Math.random 0件');
+  } else {
+    ok('初期化で例外なし', true, 'AudioContext なしのためスキップ');
+    ok('SEの再生要求で例外なし', true, 'スキップ');
+    ok('BGMの先読みで例外なし', true, 'スキップ');
+    ok('状態観測で例外なし', true, 'スキップ');
+    ok('ノイズを乱数で作っていない', CT.ENGINE.AUDIO_CODE.indexOf('Math.random') < 0, 'Math.random 0件');
+  }
+  ok('実行中の例外なし', errors.length === 0, errors.join(' / ') || '0件');
+  document.getElementById('sum').textContent = (fail === 0 ? 'ALL PASS' : 'FAILあり') + ' — PASS ' + pass + ' / FAIL ' + fail;
+  document.getElementById('out').textContent = lines.join('\n');
+  window.__AUDIO_CHECK__ = {pass:pass, fail:fail, lines:lines};
+}, 100);
+})();
+</script>
+</body>
+</html>

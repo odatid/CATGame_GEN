@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>本番前チェック — 保存・戻る・出力・画面サイズ</title>
+<style>
+body{font-family:"Zen Kaku Gothic New","Yu Gothic",sans-serif;background:#141414;color:#eee;padding:14px;line-height:1.6}
+h1{font-size:16px;margin:0 0 6px;color:#e8873d}
+#sum{font-size:18px;font-weight:bold;margin:8px 0}
+table{border-collapse:collapse;font-size:.82rem;margin-top:6px}
+th,td{border:1px solid #3a3733;padding:5px 8px;text-align:left;vertical-align:top}
+th{background:#262421;color:#f7c59f}
+.p{color:#7ddb7d;font-weight:bold}.f{color:#ff7d7d;font-weight:bold}
+.small{color:#bdbab2;font-size:.78rem}
+#json{display:none}
+</style>
+</head>
+<body>
+<h1>本番前チェック（保存・戻る・出力6種・画面サイズ）</h1>
+<p class="small">制限版のアプリを実際に操作して、途中保存・再読み込み・戻る・グループ・出力タブ・画面幅を数えます。</p>
+<div id="sum">RUNNING</div>
+<table id="tbl"><thead><tr><th>検査</th><th>結果</th><th>中身</th></tr></thead><tbody></tbody></table>
+<pre id="json"></pre>
+<iframe id="f" src="../index.html" style="width:1280px;height:900px;border:1px solid #3a3733"></iframe>
+<script>
+(function(){
+'use strict';
+var lines = [], pass = 0, fail = 0;
+function ok(name, cond, note){
+  if(cond){ pass++; lines.push({ok:true, name:name, note:note||''}); }
+  else { fail++; lines.push({ok:false, name:name, note:note||''}); }
+}
+var f = document.getElementById('f');
+function waitLoad(){
+  return new Promise(function(res){
+    var done = false;
+    function go(){ if(done) return; done = true; f.removeEventListener('load', go); res(); }
+    f.addEventListener('load', go);
+  });
+}
+function doc(){ return f.contentDocument; }
+function q(sel){ return doc().querySelector(sel); }
+function click(sel){
+  var el = q(sel);
+  if(!el){ throw new Error('ボタンが見つからない: ' + sel); }
+  el.click();
+}
+function text(sel){ var el = q(sel); return el ? el.textContent : ''; }
+function eyebrow(){ return text('.eyebrow'); }
+async function reload(){
+  var p = waitLoad();
+  f.contentWindow.location.reload();
+  await p;
+}
+async function setState(st){
+  f.contentWindow.localStorage.setItem('catgame.v1', JSON.stringify(st));
+  await reload();
+}
+async function toPurpose(){
+  await setState({step:'purpose'});
+}
+async function fullFlow(genre, action, pack, pages){
+  await toPurpose();
+  click('[data-genre="' + genre + '"]');
+  click('[data-pick="action"][data-id="' + action + '"]');
+  click('[data-variant="0"]');
+  click('[data-go="cons"]');
+  for(var i=0;i<(pages||1);i++){ click('[data-packpage]'); }
+  click('[data-pack="' + pack + '"]');
+  click('[data-go="check"]');
+  if(q('[data-emsok]')){ click('[data-emsok]'); }
+  click('[data-go="plan"]');
+  click('[data-go="out"]');
+}
+function readOut(){ var el = q('pre.out'); return el ? el.textContent : ''; }
+
+(async function(){
+  try{
+    /* 1. 5仕かけの通し（代表として移動型で保存・戻る・出力を確認） */
+    await fullFlow('gh_kit_move', 'a_climb', 'pk_timeob', 1);
+    ok('目的→出力まで到達', eyebrow().indexOf('STEP 07') >= 0, eyebrow());
+
+    /* 2. 出力6種 */
+    var tabs = ['plan','image','assets','web','unity','proposal'];
+    var tabBad = [];
+    tabs.forEach(function(t){
+      click('[data-tab="' + t + '"]');
+      var s = readOut();
+      if(s.length < 20 || /undefined|NaN/.test(s)){ tabBad.push(t); }
+    });
+    ok('出力6種が空でない', tabBad.length === 0, tabBad.join(',') || '6/6種OK');
+
+    /* 3. グループ画面と戻る */
+    click('[data-go="group"]');
+    ok('グループ画面へ行ける', eyebrow().indexOf('STEP 08') >= 0, eyebrow());
+    click('[data-go="out"]');
+    ok('出力へ戻れる', eyebrow().indexOf('STEP 07') >= 0, eyebrow());
+    click('[data-go="plan"]');
+    ok('ゲーム案へ戻れる', eyebrow().indexOf('STEP 06') >= 0, eyebrow());
+    click('[data-go="check"]');
+    ok('点検へ戻れる', eyebrow().indexOf('STEP 05') >= 0, eyebrow());
+    click('[data-go="cons"]');
+    ok('しばりへ戻れる', eyebrow().indexOf('STEP 04') >= 0, eyebrow());
+    click('[data-go="action"]');
+    ok('てだてへ戻れる', eyebrow().indexOf('STEP 03') >= 0, eyebrow());
+    click('[data-go="purpose"]');
+    ok('ねらいへ戻れる', eyebrow().indexOf('STEP 02') >= 0, eyebrow());
+
+    /* 4. 途中保存 → 再読み込み */
+    await toPurpose();
+    click('[data-genre="gh_kit_move"]');
+    click('[data-pick="action"][data-id="a_climb"]');
+    click('[data-variant="0"]');
+    click('[data-go="cons"]');
+    click('[data-packpage]');
+    click('[data-pack="pk_timeob"]');
+    var savedRaw = f.contentWindow.localStorage.getItem('catgame.v1');
+    var saved = null;
+    try{ saved = JSON.parse(savedRaw); }catch(e){}
+    ok('しばり画面が保存される', saved && saved.step === 'cons' && saved.purpose === 'p_climb_tower' && saved.pattern === 'pt_moveplat',
+       saved ? (saved.step + ' / ' + saved.purpose + ' / ' + saved.pattern + ' / 制約' + (saved.cons||[]).length + '件') : '保存なし');
+    await reload();
+    var rows = doc().querySelectorAll('.cons-row').length;
+    var packOn = doc().querySelector('[data-pack].on');
+    ok('再読み込みで続きから', eyebrow().indexOf('STEP 04') >= 0 && rows === 2,
+       eyebrow() + ' / 制約' + rows + '件 / 選択パック' + (packOn ? 'あり' : 'なし'));
+    click('[data-go="check"]');
+    if(q('[data-emsok]')){ click('[data-emsok]'); }
+    click('[data-go="plan"]');
+    click('[data-go="out"]');
+    click('[data-tab="web"]');
+    var web = readOut();
+    ok('保存後にWeb出力できる', web.indexOf('SC_Base_Side') >= 0 && web.indexOf('Moving Platform') >= 0,
+       web.length + '字 / SC_Base_Side / Moving Platform');
+
+    /* 5. 壊れた保存データから復帰 */
+    f.contentWindow.localStorage.setItem('catgame.v1', 'not json');
+    await reload();
+    ok('壊れた保存から復帰', eyebrow().indexOf('STEP 00') >= 0 && eyebrow().indexOf('表示エラー') < 0, eyebrow());
+
+    /* 6. 制限外の型は使わない */
+    await setState({step:'out', tab:'web', subject:'sub_cat', purpose:'p_care_lap', action:'a_sun', variant:0,
+      pattern:'pg_care', cons:[{id:'c_time',num:30}],
+      profile:{good:['good_heal'], bad:['bad_vacuum'], feat:['feat_lap'], target:['tg_heal'], other:{}}});
+    click('[data-tab="web"]');
+    var guarded = readOut();
+    ok('制限外の型を無視', guarded.indexOf('いやす型') < 0 && guarded.indexOf('システム詳細') < 0,
+       'pg_care の型名なし / ' + guarded.length + '字');
+
+    /* 7. 最初から（保存を消す） */
+    await toPurpose();
+    f.contentWindow.confirm = function(){ return true; };
+    click('#btnRestart');
+    ok('最初からで初期化', eyebrow().indexOf('STEP 00') >= 0, eyebrow());
+    var resetRaw = f.contentWindow.localStorage.getItem('catgame.v1');
+    var resetSt = null;
+    try{ resetSt = JSON.parse(resetRaw); }catch(e){}
+    ok('保存が初期状態に戻る', !resetRaw || (resetSt && resetSt.step === 'intro'),
+       resetRaw ? ('step=' + (resetSt && resetSt.step)) : '保存なし');
+
+    /* 8. 画面サイズ（プロジェクター・PC・スマホ） */
+    await toPurpose();
+    var sizes = [
+      [1920,1080,'16:9 大型'],
+      [1280,720,'16:9 標準'],
+      [1024,768,'4:3 プロジェクター'],
+      [800,600,'小さめPC'],
+      [390,844,'スマホ縦']
+    ];
+    for(var i=0;i<sizes.length;i++){
+      var w = sizes[i][0], h = sizes[i][1], label = sizes[i][2];
+      f.style.width = w + 'px'; f.style.height = h + 'px';
+      await new Promise(function(res){ setTimeout(res, 120); });
+      var d = f.contentDocument.documentElement;
+      var overflow = d.scrollWidth - d.clientWidth;
+      var card = d.querySelector('.card');
+      var rect = card ? card.getBoundingClientRect() : null;
+      ok('レイアウト ' + w + '×' + h + '（' + label + '）',
+         overflow <= 2 && rect && rect.left >= -1 && rect.right <= w + 1,
+         'はみ出し' + overflow + 'px / カード幅' + (rect ? Math.round(rect.width) : 0) + 'px');
+    }
+
+    var tbody = document.querySelector('#tbl tbody');
+    lines.forEach(function(r){
+      var tr = document.createElement('tr');
+      tr.innerHTML = '<td>'+r.name+'</td><td class="'+(r.ok?'p':'f')+'">'+(r.ok?'PASS':'FAIL')+'</td><td>'+r.note+'</td>';
+      tbody.appendChild(tr);
+    });
+    document.getElementById('sum').textContent = (fail === 0 ? 'ALL PASS' : 'FAILあり') +
+      ' — PASS ' + pass + ' / FAIL ' + fail + '（' + (pass+fail) + '項目）';
+    document.getElementById('json').textContent = JSON.stringify({pass:pass, fail:fail, lines:lines});
+    window.__FINAL_CHECK__ = {pass:pass, fail:fail};
+  }catch(e){
+    document.getElementById('sum').textContent = 'ERROR — ' + e.message;
+    document.getElementById('json').textContent = JSON.stringify({pass:pass, fail:fail, error:e.message, lines:lines});
+  }
+})();
+})();
+</script>
+</body>
+</html>

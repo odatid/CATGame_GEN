@@ -31,7 +31,8 @@ EMS(Ends and Means Structure／手段目的構造)を高校生が自分の手で
 - しばりおすすめ: 32案(8ページ巡回)・文言は選んだ苦手から自動生成
 - 本番リハーサル: tools/rehearsal_check.html で制限版5仕かけを目的→出力まで通し、5/5 PASS。Unity依頼は型ごとのシーン/キットを明記(pt_escape は SC_Base_Vertical)
 - 生成テスト2往復目: 水位は3段グラデーション＋水面線＋sin波、被弾は赤フラッシュ＋無敵点滅。tools/generation_check.html 20/20、tools/engine_check.html 12/12
-- 検証: tools/(judge_check.html・cat_draw_check.html・pattern_check.html・rehearsal_check.html・generation_check.html・engine_check.html)。変更後は必ず回す
+- 本番前チェック: tools/final_check.html 21/21(5仕かけ通し・出力6種・途中保存と再読込・戻る・グループ・制限外型の無視・リセット・5画面サイズ)。tools/audio_check.html 9/9(初期化・SE/BGM要求・例外なし。聴感は未検証)
+- 検証: tools/(judge_check.html・cat_draw_check.html・pattern_check.html・rehearsal_check.html・generation_check.html・engine_check.html・final_check.html・audio_check.html)。変更後は必ず回す
 
 ## 次のタスク候補(2026-11-02 更新)
 
@@ -39,7 +40,9 @@ EMS(Ends and Means Structure／手段目的構造)を高校生が自分の手で
 - 完了: `limited` ブランチの本番制限版(CT.LIMITED でUnityキット5型に制限。コードは main と共通)
 - 完了: 本番リハーサル(制限版の5仕かけで目的→出力まで通し、tools/rehearsal_check.html で5/5 PASS)
 - 完了: 生成テスト2往復目(水位の3段グラデーション＋水面線＋sin波、被弾の赤フラッシュ＋無敵点滅。tools/generation_check.html 20/20、tools/engine_check.html 12/12)
-1. 本番前の最終確認(教室PC・プロジェクター・音声・localStorage・5仕かけの実操作)
+- 完了: 本番前チェック(tools/final_check.html 21/21、tools/audio_check.html 9/9。画面は1920×1080/1280×720/1024×768/800×600/390×844)
+1. 先生のpush後、公開URLで同じチェックを再実行
+2. 教室PC・プロジェクター・音声の実機確認(この環境では聴感・投影・端末音量が未検証)
 
 ## ブランチ
 
