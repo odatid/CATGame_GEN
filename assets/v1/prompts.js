@@ -327,6 +327,13 @@ J ? (J.color + '（' + J.verdict + '）: ' + J.reason) : '未判定',
 
 /* ---------------- 5. Unity依頼プロトコル（後日の移植実験用） ---------------- */
 function promptUnity(P){
+  const pat = (P.patternId && CT.PATTERNS && CT.PATTERNS[P.patternId]) ? CT.PATTERNS[P.patternId] : null;
+  const kitLine = (pat && pat.unity)
+    ? '・シーン: ' + pat.unity.scene + ' ／ 使う仕かけ（Unityキット）: ' + pat.unity.kit.join(' / ')
+    : 'Moving Platform / Switch / Push Box / Hazard Area / Patrol Enemy / Collectible / Goal / Timer / Hide Object';
+  const sceneLine = (pat && pat.unity)
+    ? '・シーンは ' + pat.unity.scene + ' を使う。'
+    : '・シーンは SC_Base_Side か SC_Base_Top のどちらか1つ。';
   return [
 '【UnityMCP 依頼プロトコル — ネコのゲームツクール（CatGameKit）】',
 '基準: 和洋九段×TID 1Dayミニゲームジャム 準備依頼書（2026-09-11）。',
@@ -334,6 +341,7 @@ function promptUnity(P){
 '',
 '■ この案を Unity に移す',
 'タイトル: ' + P.title,
+(pat ? '・型: ' + pat.label : ''),
 '【目的（E）】' + goalOf(P),
 '【手段（M）】中心: ' + (P.centerVerb || '未記入') + (P.subVerb ? '／サブ: ' + P.subVerb : ''),
 '【制約（S）→ GameSettings への反映】',
@@ -343,9 +351,9 @@ function promptUnity(P){
 '【出てくる障害（具体）】' + P.obstacles.join('、') + '（見た目だけ差し替え。機能は Patrol/Chase を使い回す）',
 '',
 '■ 使うギミック（優先度A）',
-'Moving Platform / Switch / Push Box / Hazard Area / Patrol Enemy / Collectible / Goal / Timer / Hide Object',
+kitLine,
 '・仕掛けは Trigger → Action の共通ルールで組む（コードを書かない）。',
-'・シーンは SC_Base_Side か SC_Base_Top のどちらか1つ。',
+sceneLine,
 '',
 '■ 変えるのはここだけ',
 'タイトル・ロゴ・BGM選択・配色・GameSettings の数値。それ以外は触らない。'
