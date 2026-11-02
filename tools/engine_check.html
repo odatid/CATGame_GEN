@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>参照コードの起動検証 — CATGame_GEN</title>
+<style>
+body{font-family:monospace;background:#141414;color:#eee;padding:14px;line-height:1.7}
+h1{font-size:15px;color:#e8873d;margin:0 0 8px}
+#sum{font-size:18px;font-weight:bold;margin:8px 0}
+#out{white-space:pre-wrap;font-size:12px}
+canvas{display:none}
+</style>
+</head>
+<body>
+<h1>参照コードの起動検証（被弾点滅・赤フラッシュ入り）</h1>
+<div id="sum">RUNNING</div>
+<pre id="out"></pre>
+<canvas id="game" width="960" height="540"></canvas>
+<script src="../assets/v1/data.js"></script>
+<script src="../assets/v1/engine_code.js"></script>
+<script src="../assets/v1/catart.js"></script>
+<script>
+(function(){
+'use strict';
+var lines = [], pass = 0, fail = 0, errors = [];
+function ok(name, cond, note){
+  if(cond){ pass++; lines.push('PASS ' + name + (note ? ' — ' + note : '')); }
+  else { fail++; lines.push('FAIL ' + name + (note ? ' — ' + note : '')); }
+}
+function inject(src){
+  var s = document.createElement('script');
+  s.textContent = src;
+  document.body.appendChild(s);
+}
+window.onerror = function(msg){ errors.push(String(msg)); };
+
+window.drawCat = CT.drawCat;
+window.drawCatSide = CT.drawCatSide;
+var core = CT.ENGINE.CORE_CODE
+  .split('drawPico').join('drawCat')
+  .split("drawCat(ctx, player.x + swayX(), player.y, 34, pose, player.sx, player.sy, 1)")
+  .join("drawCat(ctx, player.x + swayX(), player.y, 34, pose, player.sx, player.sy, 1, 'shima')");
+inject(core);
+
+setTimeout(function(){
+  ok('参照コードの関数', typeof update === 'function' && typeof render === 'function' && typeof startGame === 'function', 'update / render / startGame');
+  ok('起動エラーなし', errors.length === 0, errors.join(' / ') || '0件');
+  ok('player.invT の初期値', typeof player !== 'undefined' && player.invT === 0, typeof player === 'undefined' ? 'player なし' : String(player.invT));
+  ok('hurtFlash の初期値', typeof hurtFlash !== 'undefined' && hurtFlash === 0, typeof hurtFlash === 'undefined' ? 'hurtFlash なし' : String(hurtFlash));
+
+  startGame();
+  player.invT = 1.2; hurtFlash = 0.18;
+  ok('被弾値をセットできる', player.invT === 1.2 && hurtFlash === 0.18, 'invT=1.2 / hurtFlash=0.18');
+  update(0.1);
+  ok('invT が0.1秒減る', Math.abs(player.invT - 1.1) < 0.02, player.invT.toFixed(2));
+  ok('hurtFlash が0.1秒減る', Math.abs(hurtFlash - 0.08) < 0.02, hurtFlash.toFixed(2));
+  update(1.2);
+  ok('invT が0に戻る', player.invT === 0, String(player.invT));
+  ok('hurtFlash が0に戻る', hurtFlash === 0, String(hurtFlash));
+
+  startGame();
+  ok('リトライで初期化', player.invT === 0 && hurtFlash === 0, 'invT=0 / hurtFlash=0');
+  player.invT = 0.05; hurtFlash = 0.1;
+  try{ render(); renderPlayScreen(); ok('点滅と赤フラッシュの描画', true, '例外なし'); }
+  catch(e){ ok('点滅と赤フラッシュの描画', false, e.message); }
+  ok('実行中の例外なし', errors.length === 0, errors.join(' / ') || '0件');
+
+  document.getElementById('sum').textContent = (fail === 0 ? 'ALL PASS' : 'FAILあり') + ' — PASS ' + pass + ' / FAIL ' + fail;
+  document.getElementById('out').textContent = lines.join('\n');
+  window.__ENGINE_CHECK__ = {pass:pass, fail:fail, lines:lines};
+}, 50);
+})();
+</script>
+</body>
+</html>

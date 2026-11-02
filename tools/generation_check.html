@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>生成テスト2往復目 — 水位グラデーション / 被弾点滅</title>
+<style>
+body{font-family:"Zen Kaku Gothic New","Yu Gothic",sans-serif;background:#141414;color:#eee;padding:14px;line-height:1.6}
+h1{font-size:16px;margin:0 0 6px;color:#e8873d}
+h2{font-size:14px;margin:18px 0 6px;color:#f7c59f}
+#sum{font-size:18px;font-weight:bold;margin:8px 0}
+table{border-collapse:collapse;font-size:.82rem;margin-top:6px}
+th,td{border:1px solid #3a3733;padding:5px 8px;text-align:left}
+th{background:#262421;color:#f7c59f}
+.p{color:#7ddb7d;font-weight:bold}.f{color:#ff7d7d;font-weight:bold}
+.small{color:#bdbab2;font-size:.78rem}
+canvas{display:block;background:#101014;border:1px solid #3a3733;width:640px;height:360px}
+button{background:#e8873d;color:#1a1208;border:0;border-radius:8px;padding:8px 16px;font-weight:bold;cursor:pointer;margin:8px 0}
+#stat{font-family:monospace;font-size:.8rem;color:#bdbab2}
+#json{display:none}
+</style>
+</head>
+<body>
+<h1>生成テスト2往復目 — 水位グラデーション / 被弾点滅</h1>
+<p class="small">Webプロトの生成プロンプトに、水の3段グラデーションと被弾の赤フラッシュ＋無敵点滅が入っているかを数えます。下は見本です。</p>
+<div id="sum">RUNNING</div>
+<table id="tbl"><thead><tr><th>検査</th><th>結果</th><th>中身</th></tr></thead><tbody></tbody></table>
+
+<h2>見本（水の3段グラデーション＋被弾点滅）</h2>
+<canvas id="cv" width="960" height="540"></canvas>
+<button id="hit" type="button">被弾してみる</button>
+<div id="stat">invT: 0.00 / 点滅: 0回</div>
+
+<pre id="json"></pre>
+<script src="../assets/v1/data.js"></script>
+<script src="../assets/v1/engine_code.js"></script>
+<script src="../assets/v1/catart.js"></script>
+<script src="../assets/v1/patterns.js"></script>
+<script src="../assets/v1/prompts.js"></script>
+<script>
+(function(){
+'use strict';
+var lines = [], pass = 0, fail = 0;
+function ok(name, cond, note){
+  if(cond){ pass++; lines.push({ok:true, name:name, note:note||''}); }
+  else { fail++; lines.push({ok:false, name:name, note:note||''}); }
+}
+function has(s, t){ return s.indexOf(t) >= 0; }
+
+var st = {
+  subject:'sub_cat', purpose:'p_run_vac', action:'a_climb', variant:0,
+  cons:[{id:'c_time',num:45},{id:'c_phys',num:2}],
+  profile:{good:['good_climb'], bad:['bad_vacuum','bad_water'], feat:['feat_box'], target:['tg_cute']},
+  pattern:'pg_run', dur:45
+};
+var out = CT.buildAll(st, null, []);
+var web = out.web || '';
+
+ok('水の3色（深い水）', has(web, '#0B2A4A'), '#0B2A4A');
+ok('水の3色（中間）', has(web, '#1F6F9C'), '#1F6F9C');
+ok('水の3色（表面）', has(web, '#7FD4FF'), '#7FD4FF');
+ok('createLinearGradient の指示', has(web, 'createLinearGradient'), '毎フレーム作り直さない条件つき');
+ok('sin波の指示', has(web, 'sin 波') || has(web, 'sin波'), '2本・位相0.9・振幅4px');
+ok('グラデーションの作り直し条件', has(web, '4px以上'), '水位が4px動いたときだけ');
+ok('被弾の無敵時間', has(web, 'player.invT = 1.2'), '1.2秒');
+ok('被弾の赤フラッシュ', has(web, 'hurtFlash = 0.18'), '0.18秒');
+ok('点滅の指示', has(web, '点滅6往復'), 'alpha 0.25 と 1.0');
+ok('点滅の実装式', has(web, 'Math.floor(player.invT * 20)'), '0.05秒ごと');
+ok('参照コードに hurtFlash', has(web, 'var hurtFlash = 0;'), '参照コード1');
+ok('参照コードに invT', has(web, 'invT: 0'), 'player の初期値');
+ok('参照コードに点滅の alpha', has(web, 'ctx.globalAlpha = catAlpha'), 'ネコだけ点滅');
+ok('参照コードに赤フラッシュ', has(web, 'rgba(255,64,64'), '被弾時');
+ok('参照コードの描画差し替え', has(web, 'drawCat(ctx, player.x + swayX()') && !has(web, 'drawPico('), 'drawCat に置換');
+ok('参照コードの柄引数', has(web, "'shima')"), 'webCore の置換が効いている');
+ok('乱数を使っていない', web.indexOf('Math.random') < 0, 'Math.random 0件');
+ok('禁止語なし', !/undefined|NaN/.test(web), 'undefined / NaN 0件');
+
+var st2 = JSON.parse(JSON.stringify(st));
+st2.pattern = 'pt_escape';
+var web2 = CT.buildAll(st2, null, []).web || '';
+ok('だっしゅつ型にも水の3色', has(web2, '#0B2A4A') && has(web2, 'SC_Base_Vertical'), 'Hazard Area が水の場合');
+
+var ids = Object.keys(CT.PATTERNS);
+var damageMissing = ids.filter(function(id){
+  var s = JSON.parse(JSON.stringify(st));
+  s.pattern = id;
+  var w = CT.buildAll(s, null, []).web || '';
+  return w.indexOf('【被弾の見せ方') < 0;
+});
+ok('全型に被弾の見せ方', damageMissing.length === 0,
+   damageMissing.length ? damageMissing.join(',') : ids.length + '/' + ids.length + '型');
+
+var tbody = document.querySelector('#tbl tbody');
+lines.forEach(function(r){
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td>'+r.name+'</td><td class="'+(r.ok?'p':'f')+'">'+(r.ok?'PASS':'FAIL')+'</td><td>'+r.note+'</td>';
+  tbody.appendChild(tr);
+});
+document.getElementById('sum').textContent = (fail === 0 ? 'ALL PASS' : 'FAILあり') +
+  ' — PASS ' + pass + ' / FAIL ' + fail + '（' + (pass+fail) + '項目）';
+document.getElementById('json').textContent = JSON.stringify({pass:pass, fail:fail, lines:lines});
+window.__GEN_CHECK__ = {pass:pass, fail:fail};
+
+/* ---------------- 見本（水の3段グラデーション＋点滅） ---------------- */
+var cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+var W = 960, H = 540, waterY = 320, t = 0, invT = 0, hurtFlash = 0, blinks = 0, lastOn = true;
+if(location.search.indexOf('hit=1') >= 0){ invT = 1.2; hurtFlash = 0.18; }
+function wave(y, phase){
+  ctx.beginPath();
+  for(var x=0; x<=W; x+=12){
+    var yy = y + Math.sin(x*0.02 + t*2.2 + phase) * 4;
+    if(x===0){ ctx.moveTo(x, yy); } else { ctx.lineTo(x, yy); }
+  }
+  ctx.stroke();
+}
+function draw(){
+  t += 1/60;
+  if(invT > 0){ invT = Math.max(0, invT - 1/60); }
+  if(hurtFlash > 0){ hurtFlash = Math.max(0, hurtFlash - 1/60); }
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#101014'; ctx.fillRect(0,0,W,H);
+  var g = ctx.createLinearGradient(0, waterY, 0, H);
+  g.addColorStop(0, '#7FD4FF');
+  g.addColorStop(0.35, '#1F6F9C');
+  g.addColorStop(1, '#0B2A4A');
+  ctx.fillStyle = g; ctx.fillRect(0, waterY, W, H - waterY);
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.lineWidth = 2;
+  wave(waterY, 0); wave(waterY, 0.9);
+  var alpha = (invT > 0 && Math.floor(invT * 20) % 2 === 0) ? 0.25 : 1;
+  var on = alpha === 1;
+  if(on !== lastOn){ blinks++; lastOn = on; }
+  ctx.globalAlpha = alpha;
+  CT.drawCat(ctx, 480, waterY, 46, 'idle', 1, 1, 1, 'shima');
+  ctx.globalAlpha = 1;
+  if(hurtFlash > 0){
+    ctx.fillStyle = 'rgba(255,64,64,' + (hurtFlash / 0.18 * 0.35).toFixed(3) + ')';
+    ctx.fillRect(0,0,W,H);
+  }
+  document.getElementById('stat').textContent =
+    'invT: ' + invT.toFixed(2) + ' / 点滅: ' + blinks + '回 / 水: 3段グラデーション';
+  requestAnimationFrame(draw);
+}
+document.getElementById('hit').addEventListener('click', function(){
+  invT = 1.2; hurtFlash = 0.18; blinks = 0; lastOn = true;
+});
+requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>
