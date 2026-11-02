@@ -293,19 +293,36 @@ CT.PACKS = [
   {id:'pk_time',   label:'じかんしばり',  items:[{id:'c_time',num:30}],
    text:'決めた時間までに達成できなくする（30秒）'},
   {id:'pk_obst',   label:'おじゃまもの',  items:[{id:'c_phys',num:1}],
-   text:'{obstacle}が動き回っていて、当たるとミスになる'},
+   text:'{ob}が動き回っていて、当たるとミスになる'},
   {id:'pk_narrow', label:'せましばり',    items:[{id:'c_space',num:240}],
    text:'動ける範囲を横240pxに狭める（自由に動けない）'},
   {id:'pk_sleep',  label:'こえゲージ',    items:[{id:'c_info',num:60}],
-   text:'{obstacle}を起こさずに進む（音ゲージ60%を維持）'},
+   text:'{who}を起こさずに進む（音ゲージ60%を維持）'},
   {id:'pk_count',  label:'かいすうしばり', items:[{id:'c_count',num:5}],
    text:'中心アクションは5回まで（失敗したやり直しも含む）'},
   {id:'pk_timeob', label:'じかん+おじゃまもの', items:[{id:'c_time',num:45},{id:'c_phys',num:2}],
-   text:'45秒以内に、{obstacle}を避けながら達成する'},
+   text:'45秒以内に、{ob}を避けながら達成する'},
   {id:'pk_narcount', label:'せま+かいすう', items:[{id:'c_space',num:160},{id:'c_count',num:3}],
    text:'動けるのは横160pxだけ。中心アクションは3回まで'},
   {id:'pk_hard',   label:'むずかしめ（2つ）', items:[{id:'c_time',num:20},{id:'c_info',num:40}],
    text:'20秒以内に、音ゲージ40%を維持しながら達成する'}
+,
+  {id:'pk_obst2',   label:'おじゃまもの（2種）', items:[{id:'c_phys',num:2}],
+   text:'{ob}と{ob2}の2つが動き回っている。両方避けながら達成する'},
+  {id:'pk_sleepob', label:'こえゲージ+おじゃまもの', items:[{id:'c_info',num:50},{id:'c_phys',num:1}],
+   text:'{who}を起こさずにゲージ50%を保ちながら、{ob}も避ける'},
+  {id:'pk_nartime', label:'せま+じかん', items:[{id:'c_space',num:320},{id:'c_time',num:40}],
+   text:'動けるのは横320pxだけ。40秒以内に達成する'},
+  {id:'pk_count3',  label:'かいすう（3回）', items:[{id:'c_count',num:3}],
+   text:'中心アクションは3回まで。1手が重くなる'},
+  {id:'pk_sleephard', label:'こえゲージ（きびしめ）', items:[{id:'c_info',num:35}],
+   text:'{who}を起こさずにゲージ35%を維持。音を立てない工夫が必須'},
+  {id:'pk_timelong', label:'じかん（ゆるめ）', items:[{id:'c_time',num:60}],
+   text:'60秒以内。じっくり考える型・はじめてのグループ向け'},
+  {id:'pk_obst3',   label:'おじゃまもの（3種）', items:[{id:'c_phys',num:3}],
+   text:'{ob}・{ob2}・{ob3}の3種を避ける。ごちゃごちゃして楽しい'},
+  {id:'pk_narobst', label:'せま+おじゃまもの', items:[{id:'c_space',num:200},{id:'c_phys',num:1}],
+   text:'動けるのは横200px。さらに{ob}が動き回っている'}
 ];
 CT.PACKS_PAGE = 4;
 
@@ -450,4 +467,4 @@ CT.inferEMS = function(st){
   ].join('／');
   return {ok: missing.length === 0, missing: missing, sentence: sentence};
 };
-CT.VERSION = {tag:'点検ボタン修正版 v0.8.2', date:'2026-11-02'};
+CT.VERSION = {tag:'しばり16案版 v0.9.0', date:'2026-11-02'};

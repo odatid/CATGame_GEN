@@ -130,18 +130,16 @@ function obstPhrase(b){
 }
 function packText(p){
   const who = (state.subject==='sub_human') ? 'ネコ' : '飼い主';
-  const b = badInfo();
-  switch(p.id){
-    case 'pk_time':     return '決めた時間までに達成できなくする（30秒）';
-    case 'pk_obst':     return obstPhrase(b);
-    case 'pk_narrow':   return '動ける範囲を横240pxに狭める（自由に動けない）';
-    case 'pk_sleep':    return who + 'を起こさずに進む（音ゲージ60%を維持）';
-    case 'pk_count':    return '中心アクションは5回まで（失敗したやり直しも含む）';
-    case 'pk_timeob':   return '45秒以内に、' + obstPhrase(b);
-    case 'pk_narcount': return '動けるのは横160pxだけ。中心アクションは3回まで';
-    case 'pk_hard':     return '20秒以内に、' + who + 'を起こさずに達成する（音ゲージ40%）';
-  }
-  return p.text;
+  const bs = (state.profile.bad || []).map(id => (CT.CANDS.bad.find(x=>x.id===id) || {})).filter(Boolean);
+  const ob  = (bs[0] && bs[0].label) || '掃除機';
+  const ob2 = (bs[1] && bs[1].label) || 'カラス';
+  const ob3 = (bs[2] && bs[2].label) || '犬';
+  const ph = (b) => (b.kind==='sound') ? b.label+'が鳴ったらミス' : (b.kind==='static') ? b.label+'に触れるとミス' : b.label+'が動き回っていて当たるとミス';
+  return String(p.text || '')
+    .split('{ob}').join(ph(bs[0] || {label:'掃除機',kind:'move'}))
+    .split('{ob2}').join(ph(bs[1] || {label:'カラス',kind:'move'}))
+    .split('{ob3}').join(ph(bs[2] || {label:'犬',kind:'move'}))
+    .split('{who}').join(who);
 }
 function drawPreviews(){
   document.querySelectorAll('canvas[data-catpose]').forEach(cv=>{
